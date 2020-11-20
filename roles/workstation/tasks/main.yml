@@ -457,6 +457,7 @@
   script:
     cmd: scripts/composer-setup.sh
     chdir: /tmp
+    creates: /usr/local/bin/composer
   changed_when: false # ignore
   become: true
 
@@ -464,5 +465,14 @@
   script:
     cmd: scripts/symfony-setup.sh --install-dir=/usr/local/bin/
     chdir: /tmp
+    creates: /usr/local/bin/symfony
   changed_when: false # ignore
   become: true
+
+- name: Install pyenv for own user
+  script:
+    cmd: scripts/pyenv-setup.sh
+    chdir: '/home/{{host_username}}'
+    creates: '/home/{{host_username}}/.pyenv'
+  changed_when: false # ignore
+  become: false
