@@ -147,15 +147,17 @@
     - insomnia
     - kafe-cli
     - libarchive-dev
+    - libbz2-dev
     - libcurl4-gnutls-dev
     - libgit2-dev
     - libguestfs-tools
     - liblua5.3-dev
-    - libreoffice-gnome
-    - libreoffice-writer
-    - libreoffice-calc
     - libreoffice-base
+    - libreoffice-calc
+    - libreoffice-gnome
     - libreoffice-impress
+    - libreoffice-writer
+    - libsqlite3-dev
     - libssh-dev
     - linux-perf-5.8
     - lynis
