@@ -113,7 +113,9 @@ machines and keep their configuration more or less the same over extended period
 
 ## Credits
 
-Wallpaper artwork - "Small Memory" © [Mikael Gustafsson](https://mikaelgustafsson.art) - [Dribbble](https://dribbble.com/MikaelGustafsson) - [Twitter](https://twitter.com/mklgustafsson).
+Current wallpaper - re-scaled version of an [original photo](https://www.pexels.com/photo/antique-brick-wall-bricks-building-331986/), © [Kaique Rocha](https://www.pexels.com/@kaiquestr)
+
+Preview wallpaper artwork - "Small Memory" © [Mikael Gustafsson](https://mikaelgustafsson.art) - [Dribbble](https://dribbble.com/MikaelGustafsson) - [Twitter](https://twitter.com/mklgustafsson).
 
 ## But but but my bootstrap scripts and manual copy pasting of everything?!
 
