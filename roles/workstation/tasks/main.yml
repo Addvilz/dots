@@ -143,6 +143,7 @@
     - gimp
     - google-chrome-stable
     - google-cloud-sdk
+    - gparted
     - inkscape
     - insomnia
     - kafe-cli
@@ -179,6 +180,7 @@
     - terminator
     - tmux
     - tmuxinator
+    - transmission
     - uget
     - valgrind
     - vinagre
