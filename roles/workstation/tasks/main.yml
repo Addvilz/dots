@@ -137,6 +137,7 @@
     - composer
     - cups
     - docker-ce
+    - ffmpeg
     - filezilla
     - fzf
     - geary
@@ -182,6 +183,8 @@
     - tmuxinator
     - transmission
     - uget
+    - v4l2loopback-dkms
+    - v4l2loopback-utils
     - valgrind
     - vinagre
     - virt-manager

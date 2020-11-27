@@ -78,6 +78,14 @@ take-cwd-ownership() {
   fi
 }
 
+test-video-feed-from-picture() {
+  ffmpeg -loop 1 -re -i "${1}" -f v4l2 -vcodec rawvideo -pix_fmt yuv420p "${2}"
+}
+
+test-video-feed-from-video() {
+  ffmpeg -re -i "${1}" -f v4l2 "${2}"
+}
+
 eval "$(bw completion --shell zsh); compdef _bw bw;"
 
 if [[ $UID == 0 || $EUID == 0 ]]; then
