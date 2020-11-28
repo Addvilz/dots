@@ -426,13 +426,12 @@
   notify: [ Install fetchfox stable ]
   become: true
 
-# Wayland is still quite unstable, and not all software supports it.
-- name: Make sure Wayland is disabled
+- name: Make sure Wayland option is enabled
   ini_file:
     path: /etc/gdm3/daemon.conf
     section: daemon
     option: WaylandEnable
-    value: 'false'
+    value: 'true'
     mode: '0644'
     backup: yes
   become: true
