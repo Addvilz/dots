@@ -104,3 +104,8 @@ if [[ -n "$PYENVDIR" && -d $PYENVDIR ]]; then
   eval "$(pyenv init -)"
   eval "$(pyenv virtualenv-init -)"
 fi
+
+CARGODIR=`realpath -q $HOME/.cargo/`
+if [[ -n "$CARGODIR" && -d $CARGODIR ]]; then
+  source $CARGODIR/env
+fi
