@@ -98,6 +98,8 @@
     - 'B9F8D658297AF3EFC18D5CDFA2F683C52980AECF' # Virtualbox
     - '72ECF46A56B4AD39C907BBB71646B01B86E50310' # Yarn
     - '12D4CD600C2240A9F4A82071D7B0B66941D01538' # Element.io
+    - '8756C4F765C9AC3CB6B85D62379CE192D401AB61' # loadimpact (k6)
+    - 'D8BAD4DE7EE17AF52A834B2D0BB75829C2D4E821' # Brave browser
   become: true
 
 # Enable extra repositories needed on the system. Mostly development, productivity etc.
@@ -122,6 +124,8 @@
     - { file: 'virtualbox', repo: 'deb [arch=amd64] https://download.virtualbox.org/virtualbox/debian {{ansible_distribution_release}} contrib' }
     - { file: 'yarn', repo: 'deb https://dl.yarnpkg.com/debian/ stable main' }
     - { file: 'element-io', repo: 'deb https://packages.riot.im/debian/ default main' }
+    - { file: 'loadimpact', repo: 'deb https://dl.bintray.com/loadimpact/deb stable main' }
+    - { file: 'brave-browser-release', repo: 'deb [arch=amd64] https://brave-browser-apt-release.s3.brave.com/ stable main' }
   become: true
 
 - name: Ensure my packages
@@ -132,6 +136,7 @@
     - adoptopenjdk-8-openj9
     - adoptopenjdk-8-openj9-jre
     - atom
+    - brave-browser
     - clang-7
     - clang-8
     - cloud-utils
@@ -151,6 +156,7 @@
     - gparted
     - inkscape
     - insomnia
+    - k6
     - kafe-cli
     - libarchive-dev
     - libbz2-dev
