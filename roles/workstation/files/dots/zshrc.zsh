@@ -22,6 +22,7 @@ export PATH=${HOME}/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin
 source $ZSH/oh-my-zsh.sh
 
 alias l="ls -lAFh --color=always --group-directories-first"
+alias gogogadget="ansible-playbook -i hosts site.yml -K"
 
 # Functions
 function cd {
