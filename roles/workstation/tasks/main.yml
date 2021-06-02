@@ -82,7 +82,8 @@
     - '8ED17AF5D7E675EB3EE3BCE98AC3B29174885C03' # AdoptOpenJDK
     - '0A0FAB860D48560332EFB581B75442BBDE9E3B09' # Atom
     - '9DC858229FC7DD38854AE2D88D81803C0EBFCD88' # Docker
-    - '54A647F9048D5688D7DA2ABE6A030B21BA07F4FB' # Google Cloud SDK
+    - '7F92E05B31093BEF5A3C2D38FEEA9169307EA071' # Google Cloud SDK
+    - '59FE0256827269DC81578F928B57C5C2836F4BEB' # Google Cloud SDK
     - '4CCA1EAF950CEE4AB83976DCA040830F7FAC5991' # Google-1
     - 'EB4C1BFD4F042F6DDDCCEC917721F63BD38B4796' # Google-2
     - '8756C4F765C9AC3CB6B85D62379CE192D401AB61' # Insomnia
@@ -98,9 +99,8 @@
     - 'B9F8D658297AF3EFC18D5CDFA2F683C52980AECF' # Virtualbox
     - '72ECF46A56B4AD39C907BBB71646B01B86E50310' # Yarn
     - '12D4CD600C2240A9F4A82071D7B0B66941D01538' # Element.io
-    - '8756C4F765C9AC3CB6B85D62379CE192D401AB61' # loadimpact (k6)
-    - 'D8BAD4DE7EE17AF52A834B2D0BB75829C2D4E821' # Brave browser
   become: true
+  tags: [ 'packages' ]
 
 # Enable extra repositories needed on the system. Mostly development, productivity etc.
 - name: Enable extra repos
@@ -109,24 +109,24 @@
     - { file: 'adoptopenjdk', repo: 'deb https://adoptopenjdk.jfrog.io/adoptopenjdk/deb/ {{ansible_distribution_release}} main' }
     - { file: 'atom-editor', repo: 'deb [arch=amd64] https://packagecloud.io/AtomEditor/atom/any/ any main' }
     - { file: 'docker', repo: 'deb [arch=amd64] https://download.docker.com/linux/debian {{ansible_distribution_release}} stable' }
-    - { file: 'google-chrome', repo: 'deb [arch=amd64] https://dl.google.com/linux/chrome/deb/ stable main' }
+    - { file: 'google-chrome', repo: 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' }
     - { file: 'google-cloud-sdk', repo: 'deb https://packages.cloud.google.com/apt cloud-sdk main' }
-    - { file: 'insomnia', repo: 'deb https://dl.bintray.com/getinsomnia/Insomnia /' }
+    #    - { file: 'insomnia', repo: 'deb https://dl.bintray.com/getinsomnia/Insomnia /' }
     - { file: 'libkafe', repo: 'deb https://dl.cloudsmith.io/public/kafe/libkafe/deb/debian {{ansible_distribution_release}} main' }
     - { file: 'lynis', repo: 'deb https://packages.cisofy.com/community/lynis/deb/ stable main' }
     - { file: 'mongodb-4.2', repo: 'deb http://repo.mongodb.org/apt/debian {{ansible_distribution_release}}/mongodb-org/4.2 main' }
     - { file: 'nodejs', repo: 'deb https://deb.nodesource.com/node_12.x {{ansible_distribution_release}} main' }
     - { file: 'php-sury-org', repo: 'deb https://packages.sury.org/php/ {{ansible_distribution_release}} main' }
     - { file: 'signal', repo: 'deb [arch=amd64] https://updates.signal.org/desktop/apt xenial main' }
-    - { file: 'skype', repo: 'deb [arch=amd64] https://repo.skype.com/deb stable main' }
+    - { file: 'skype-stable', repo: 'deb [arch=amd64] https://repo.skype.com/deb stable main' }
     - { file: 'slack', repo: 'deb https://packagecloud.io/slacktechnologies/slack/debian/ jessie main' }
     - { file: 'spotify', repo: 'deb http://repository.spotify.com stable non-free' } # HTTP :(
     - { file: 'virtualbox', repo: 'deb [arch=amd64] https://download.virtualbox.org/virtualbox/debian {{ansible_distribution_release}} contrib' }
     - { file: 'yarn', repo: 'deb https://dl.yarnpkg.com/debian/ stable main' }
     - { file: 'element-io', repo: 'deb https://packages.riot.im/debian/ default main' }
-    - { file: 'loadimpact', repo: 'deb https://dl.bintray.com/loadimpact/deb stable main' }
-    - { file: 'brave-browser-release', repo: 'deb [arch=amd64] https://brave-browser-apt-release.s3.brave.com/ stable main' }
+    - { file: 'vivaldi', repo: 'deb https://repo.vivaldi.com/archive/deb/ stable main' }
   become: true
+  tags: [ 'packages' ]
 
 - name: Ensure my packages
   package: name='{{item}}' state=latest
@@ -136,7 +136,6 @@
     - adoptopenjdk-8-openj9
     - adoptopenjdk-8-openj9-jre
     - atom
-    - brave-browser
     - clang-7
     - clang-8
     - cloud-utils
@@ -156,7 +155,6 @@
     - gparted
     - inkscape
     - insomnia
-    - k6
     - kafe-cli
     - libarchive-dev
     - libbz2-dev
@@ -204,6 +202,7 @@
     - yarn
     - zenmap
   become: true
+  tags: [ 'packages' ]
 
 - name: Install PHP
   package: name='{{item}}' state=latest
@@ -252,6 +251,7 @@
     - php8.0-mysql
     - php8.0-xml
   become: true
+  tags: [ 'packages' ]
 
 - name: Ensure system files
   copy: src='{{item.src}}'  dest='{{item.dest}}' mode='0644' owner='root' group='root'
