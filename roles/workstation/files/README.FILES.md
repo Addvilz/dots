@@ -54,8 +54,3 @@ http://manpages.ubuntu.com/manpages/bionic/man5/interface-order.5.html.
 ## NetworkManager.conf
 
 Configure Network Manager. See https://linux.die.net/man/5/networkmanager.conf.
-
-
-## nftables.conf
-
-Configure nftables firewall rules. See https://wiki.debian.org/nftables.

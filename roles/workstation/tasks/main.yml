@@ -6,19 +6,26 @@
     state: absent
     regexp: '^deb cdrom'
   notify: [ Update APT ]
-  become: true
+  become: yes
 
 # Ensure backports has a higher priority than release
-- name: Copy apt backports preferences
-  copy: src=apt_pin_backports dest=/etc/apt/preferences.d/backports mode='0644' owner=root group=root
-  become: true
+- name: Copy apt backports preferences to enable backports with high priority
+  copy:
+    src: apt_pin_backports
+    dest: /etc/apt/preferences.d/backports
+    mode: '0644'
+    owner: root
+    group: root
+  become: yes
 
 # Flush handlers for previous task.
 - meta: flush_handlers
 
 # Make sure relevant system and desktop support packages are installed.
-- name: Ensure system packages
-  package: name='{{item}}' state=latest
+- name: Ensure base system packages
+  package:
+    name: '{{item}}'
+    state: latest
   loop:
     - apt-transport-https
     - arc-theme
@@ -31,6 +38,8 @@
     - dnsutils
     - file-roller
     - firmware-linux
+    - firewalld
+    - firewall-config
     - gdm3
     - git
     - git-extras
@@ -42,14 +51,12 @@
     - htop
     - libcanberra-gtk-module
     - libpam-tmpdir
-    - linux-headers-5.8.0-0.bpo.2-amd64
-    - linux-headers-5.8.0-0.bpo.2-common
-    - linux-image-5.8.0-0.bpo.2-amd64
+    - linux-headers-amd64
+    - linux-image-amd64
     - network-manager
     - network-manager-gnome
     - network-manager-openvpn
     - network-manager-openvpn-gnome
-    - nftables
     - openssh-client
     - openssh-server
     - openvpn
@@ -64,17 +71,26 @@
     - whois
     - zip
     - zsh
-  become: true
+  tags: [ packages ]
+  become: yes
 
-# Make sure some packages are removed
-- name: Ensure system packages
-  package: name='{{item}}' state=absent
+- name: Ensure using libcurl3-gnutls=7.64.0-4+deb10u2
+  package:
+    name: 'libcurl3-gnutls=7.64.0-4+deb10u2'
+    state: present
+  become: yes
+
+# Make sure these packages are absent
+- name: Ensure system packages that should be absent are removed
+  package:
+    name: '{{item}}'
+    state: absent
   loop:
     - apt-listbugs
-  become: true
+  become: yes
 
 # Ensure relevant APT keys are present on the system to support extra repositories added later.
-- name: Add apt keys
+- name: Add apt keys needed for software install
   apt_key:
     keyserver: keyserver.ubuntu.com
     id: '{{item}}'
@@ -86,50 +102,49 @@
     - '59FE0256827269DC81578F928B57C5C2836F4BEB' # Google Cloud SDK
     - '4CCA1EAF950CEE4AB83976DCA040830F7FAC5991' # Google-1
     - 'EB4C1BFD4F042F6DDDCCEC917721F63BD38B4796' # Google-2
-    - '8756C4F765C9AC3CB6B85D62379CE192D401AB61' # Insomnia
     - 'AEE35447B5D3E4A69860622702F762CA6730E6A7' # libkafe
     - 'C80E383C3DE9F082E01391A0366C67DE91CA5D5F' # Lynis
     - 'E162F504A20CDF15827F718D4B7C549A058F8B6B' # MongoDB v4.2 rel
     - '9FD3B784BC1C6FC31A8A0A1C1655A0AB68576280' # NodeSource
     - '15058500A0235D97F5D10063B188E2B695BD4743' # php-sury-org
-    - 'DBA36B5181D0C816F630E889D980A17457F6FB06' # Signal
     - 'D4040146BE3972509FD57FC71F3045A5DF7587C3' # Skype
     - 'DB085A08CA13B8ACB917E0F6D938EC0D038651BD' # Slack
     - '8FD3D9A8D3800305A9FFF259D1742AD60D811D58' # Spotify
     - 'B9F8D658297AF3EFC18D5CDFA2F683C52980AECF' # Virtualbox
     - '72ECF46A56B4AD39C907BBB71646B01B86E50310' # Yarn
-    - '12D4CD600C2240A9F4A82071D7B0B66941D01538' # Element.io
-  become: true
-  tags: [ 'packages' ]
+  become: yes
+  tags: [ packages ]
 
-# Enable extra repositories needed on the system. Mostly development, productivity etc.
-- name: Enable extra repos
-  apt_repository: filename='{{item.file}}' repo='{{item.repo}}' state=present
+# Setup extra repositories needed on the system. Mostly development, productivity etc.
+- name: Setup extra repositories for software install
+  apt_repository:
+    filename: '{{item.file}}'
+    repo: '{{item.repo}}'
+    state: present
   loop:
     - { file: 'adoptopenjdk', repo: 'deb https://adoptopenjdk.jfrog.io/adoptopenjdk/deb/ {{ansible_distribution_release}} main' }
     - { file: 'atom-editor', repo: 'deb [arch=amd64] https://packagecloud.io/AtomEditor/atom/any/ any main' }
     - { file: 'docker', repo: 'deb [arch=amd64] https://download.docker.com/linux/debian {{ansible_distribution_release}} stable' }
     - { file: 'google-chrome', repo: 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' }
     - { file: 'google-cloud-sdk', repo: 'deb https://packages.cloud.google.com/apt cloud-sdk main' }
-    #    - { file: 'insomnia', repo: 'deb https://dl.bintray.com/getinsomnia/Insomnia /' }
+    - { file: 'insomnia', repo: 'deb [trusted=yes arch=amd64] https://download.konghq.com/insomnia-ubuntu/ default all' }
     - { file: 'libkafe', repo: 'deb https://dl.cloudsmith.io/public/kafe/libkafe/deb/debian {{ansible_distribution_release}} main' }
     - { file: 'lynis', repo: 'deb https://packages.cisofy.com/community/lynis/deb/ stable main' }
     - { file: 'mongodb-4.2', repo: 'deb http://repo.mongodb.org/apt/debian {{ansible_distribution_release}}/mongodb-org/4.2 main' }
     - { file: 'nodejs', repo: 'deb https://deb.nodesource.com/node_12.x {{ansible_distribution_release}} main' }
     - { file: 'php-sury-org', repo: 'deb https://packages.sury.org/php/ {{ansible_distribution_release}} main' }
-    - { file: 'signal', repo: 'deb [arch=amd64] https://updates.signal.org/desktop/apt xenial main' }
     - { file: 'skype-stable', repo: 'deb [arch=amd64] https://repo.skype.com/deb stable main' }
     - { file: 'slack', repo: 'deb https://packagecloud.io/slacktechnologies/slack/debian/ jessie main' }
     - { file: 'spotify', repo: 'deb http://repository.spotify.com stable non-free' } # HTTP :(
     - { file: 'virtualbox', repo: 'deb [arch=amd64] https://download.virtualbox.org/virtualbox/debian {{ansible_distribution_release}} contrib' }
     - { file: 'yarn', repo: 'deb https://dl.yarnpkg.com/debian/ stable main' }
-    - { file: 'element-io', repo: 'deb https://packages.riot.im/debian/ default main' }
-    - { file: 'vivaldi', repo: 'deb https://repo.vivaldi.com/archive/deb/ stable main' }
-  become: true
-  tags: [ 'packages' ]
+  become: yes
+  tags: [ packages ]
 
-- name: Ensure my packages
-  package: name='{{item}}' state=latest
+- name: Install workstation packages
+  package:
+    name: '{{item}}'
+    state: latest
   loop:
     - adoptopenjdk-11-openj9
     - adoptopenjdk-11-openj9-jre
@@ -144,7 +159,6 @@
     - cups
     - docker-ce
     - eiskaltdcpp
-    - element-desktop
     - ffmpeg
     - filezilla
     - fzf
@@ -180,7 +194,6 @@
     - openvpn
     - python3
     - python3-pip
-    - signal-desktop
     - skypeforlinux
     - slack-desktop
     - spotify-client
@@ -201,11 +214,13 @@
     - wrk
     - yarn
     - zenmap
-  become: true
-  tags: [ 'packages' ]
+  become: yes
+  tags: [ packages ]
 
 - name: Install PHP
-  package: name='{{item}}' state=latest
+  package:
+    name: '{{item}}'
+    state: latest
   loop:
     # PHP 7.2
     - php7.2-apcu
@@ -250,100 +265,152 @@
     - php8.0-mbstring
     - php8.0-mysql
     - php8.0-xml
-  become: true
-  tags: [ 'packages' ]
+  become: yes
+  tags: [ packages ]
 
 - name: Ensure system files
-  copy: src='{{item.src}}'  dest='{{item.dest}}' mode='0644' owner='root' group='root'
+  copy:
+    src: '{{item.src}}'
+    dest: '{{item.dest}}'
+    mode: '0644'
+    owner: root
+    group: root
   loop:
     - { src: menu-icon.svg, dest: /etc/menu-icon.svg } # Used by Arc Menu GNOME extension.
     - { src: wallpaper.png, dest: /etc/wallpaper.png } # System default wallpaper
     - { src: issue, dest: /etc/issue } # System banner
     - { src: issue.net, dest: /etc/issue.net } # System banner - for network clients
     - { src: motd, dest: /etc/motd } # User motd
-  become: true
+  become: yes
 
 # Ensure DCONF profile is present on the system. This deals with desktop customization and defaults.
-- name: Create /etc/dconf/profile
-  file: path='/etc/dconf/profile' state=directory mode='0755' owner=root group=root
-  become: true
+- name: Configure DCONF
+  file:
+    path: /etc/dconf/profile
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  become: yes
 
 - name: Copy dconf user profile config
-  copy: src=dconf_profile_user dest=/etc/dconf/profile/user mode='0644' owner=root group=root
-  become: true
+  copy:
+    src: dconf_profile_user
+    dest: /etc/dconf/profile/user
+    mode: '0644'
+    owner: root
+    group: root
+  become: yes
 
 - name: Create /etc/dconf/db/local.d
-  file: path='/etc/dconf/db/local.d' state=directory mode='0755' owner=root group=root
-  become: true
+  file:
+    path: /etc/dconf/db/local.d
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  become: yes
 
 - name: Update dconf settings
-  copy: src=dconf_settings.ini dest=/etc/dconf/db/local.d/00-global mode='0644' owner=root group=root
+  copy:
+    src: dconf_settings.ini
+    dest: /etc/dconf/db/local.d/00-global
+    mode: '0644'
+    owner: root
+    group: root
   notify: [ Update dconf ]
-  become: true
+  become: yes
 # END
 
 # Configure network manager
 - name: Copy NetworkManager.conf
-  copy: src=NetworkManager.conf dest=/etc/NetworkManager/NetworkManager.conf mode='0644' owner=root group=root
+  copy:
+    src: NetworkManager.conf
+    dest: /etc/NetworkManager/NetworkManager.conf
+    mode: '0644'
+    owner: root
+    group: root
   notify: [ Restart NetworkManager ]
-  become: true
+  become: yes
 
 # Configure SSH server
 - name: Copy sshd_config
-  copy: src=sshd_config dest=/etc/ssh/sshd_config mode='0644' owner=root group=root
+  copy:
+    src: sshd_config
+    dest: /etc/ssh/sshd_config
+    mode: '0644'
+    owner: root
+    group: root
   notify: [ Restart sshd ]
-  become: true
+  become: yes
 
 # Configure local caching DNS
 - name: Copy dnsmasq config
-  copy: src=dnsmasq.conf dest=/etc/dnsmasq.d/local.conf mode='0644' owner=root group=root
+  copy:
+    src: dnsmasq.conf
+    dest: /etc/dnsmasq.d/local.conf
+    mode: '0644'
+    owner: root
+    group: root
   notify: [ Restart dnsmasq ]
-  become: true
+  become: yes
 
 # Ensure network interfaces are scanned in certain order for resolvconf
 - name: Copy interface-order
-  copy: src=interface-order dest=/etc/resolvconf/interface-order mode='0644' owner=root group=root
+  copy:
+    src: interface-order
+    dest: /etc/resolvconf/interface-order
+    mode: '0644'
+    owner: root
+    group: root
   notify: [ Update resolvconf ]
-  become: true
+  become: yes
 
 # Configure default system UMASK (https://wiki.debian.org/Permissions)
 - name: Ensure default umask
   lineinfile:
     path: /etc/pam.d/common-session
     line: 'session optional pam_umask.so umask=022'
-  become: true
+  become: yes
 
 # Configure boot screen
-- name: Copy plymouthd.conf
-  copy: src=plymouthd.conf dest=/etc/plymouth/plymouthd.conf mode='0644' owner=root group=root
+- name: Configure boot screen
+  copy:
+    src: plymouthd.conf
+    dest: /etc/plymouth/plymouthd.conf
+    mode: '0644'
+    owner: root
+    group: root
   notify: [ Update initramfs ]
-  become: true
+  become: yes
 
 - name: Install oh-my-zsh for root
-  git: repo='https://github.com/ohmyzsh/ohmyzsh' dest=/root/.oh-my-zsh
-  become: true
+  script:
+    cmd: 'scripts/oh-my-zsh-setup.sh --unattended --keep-zshrc'
+    creates: '/root/.oh-my-zsh'
+  changed_when: false # ignore
+  become: yes
 
 - name: Install oh-my-zsh for self
-  git: repo='https://github.com/ohmyzsh/ohmyzsh' dest='/home/{{host_username}}/.oh-my-zsh'
+  script:
+    cmd: 'scripts/oh-my-zsh-setup.sh --unattended --keep-zshrc'
+    chdir: '/home/{{host_username}}'
+    creates: '/home/{{host_username}}/.oh-my-zsh'
+  changed_when: false # ignore
 
 - name: Install fonts
-  copy: src=fonts/ dest=/usr/local/share/fonts
-  become: true
-
-# Configure firewall
-- name: Install nftables.conf
-  copy: src=nftables.conf dest=/etc/nftables.conf
-  notify: [ Reload nftables ]
-  become: true
+  copy:
+    src: fonts/
+    dest: /usr/local/share/fonts
+  become: yes
 
 - name: Ensure group "docker" exists
   group:
     name: docker
     state: present
-  become: true
+  become: yes
 
-# Ensure own user settings
-- name: Update own user
+- name: Update own user profile
   user:
     name: '{{host_username}}'
     shell: /bin/zsh
@@ -352,28 +419,48 @@
     create_home: yes
     password: '*' # Initial password is none, account locked
     update_password: on_create # Do not reset password from ansible
-  become: true
+  become: yes
 
-- name: Update root
+- name: Update root user profile
   user:
     name: root
     shell: /bin/zsh
-  become: true
+  become: yes
 
 - name: Ensure home directory has correct permissions
-  file: path='/home/{{host_username}}/' state=directory mode='0700' owner='{{host_username}}' group='{{host_username}}'
-  become: true
+  file:
+    path: '/home/{{host_username}}/'
+    state: directory
+    mode: '0700'
+    owner: '{{host_username}}'
+    group: '{{host_username}}'
+  become: yes
 
 - name: Create ~/.ssh/
-  file: path='/home/{{host_username}}/.ssh' state=directory mode='0700' owner='{{host_username}}' group='{{host_username}}'
-  become: true
+  file:
+    path: '/home/{{host_username}}/.ssh'
+    state: directory
+    mode: '0700'
+    owner: '{{host_username}}'
+    group: '{{host_username}}'
+  become: yes
 
 - name: Create ~/.atom/
-  file: path='/home/{{host_username}}/.atom' state=directory mode='0700' owner='{{host_username}}' group='{{host_username}}'
-  become: true
+  file:
+    path: '/home/{{host_username}}/.atom'
+    state: directory
+    mode: '0700'
+    owner: '{{host_username}}'
+    group: '{{host_username}}'
+  become: yes
 
 - name: Ensure personal dot files
-  copy: src='{{item.src}}'  dest='{{item.dest}}' mode='0600' owner='{{host_username}}' group='{{host_username}}'
+  copy:
+    src: '{{item.src}}'
+    dest: '{{item.dest}}'
+    mode: '0600'
+    owner: '{{host_username}}'
+    group: '{{host_username}}'
   loop:
     - { src: dots/zshrc.zsh, dest: '/home/{{host_username}}/.zshrc' }
     - { src: dots/tmux.conf, dest: '/home/{{host_username}}/.tmux.conf' }
@@ -385,27 +472,42 @@
     - { src: dots/.atom/styles.less, dest: '/home/{{host_username}}/.atom/styles.less' }
 
 - name: Ensure root dot files
-  copy: src='{{item.src}}' dest='{{item.dest}}' mode='0600' owner='root' group='root'
+  copy:
+    src: '{{item.src}}'
+    dest: '{{item.dest}}'
+    mode: '0600'
+    owner: root
+    group: root
   loop:
     - { src: dots/zshrc.zsh, dest: '/root/.zshrc' }
     - { src: dots/editorconfig, dest: '/root/.editorconfig' }
     - { src: dots/wgetrc, dest: '/root/.wgetrc' }
     - { src: dots/curlrc, dest: '/root/.curlrc' }
-  become: true
+  become: yes
 
 - name: Ensure personal files (from templates)
-  template: src='{{item.src}}'  dest='{{item.dest}}' mode='0600' owner='{{host_username}}' group='{{host_username}}'
+  template:
+    src: '{{item.src}}'
+    dest: '{{item.dest}}'
+    mode: '0600'
+    owner: '{{host_username}}'
+    group: '{{host_username}}'
   loop:
     - { src: dots/gitconfig, dest: '/home/{{host_username}}/.gitconfig' }
     - { src: dots/authorized_keys, dest: '/home/{{host_username}}/.ssh/authorized_keys' }
 
 - name: Ensure default directories in home
-  file: path='{{item}}' state=directory mode='0700' owner='{{host_username}}' group='{{host_username}}'
+  file:
+    path: '{{item}}'
+    state: directory
+    mode: '0700'
+    owner: '{{host_username}}'
+    group: '{{host_username}}'
   loop:
     - '/home/{{host_username}}/dots'
     - '/home/{{host_username}}/CLionProjects'
     - '/home/{{host_username}}/IdeaProjects'
-  become: true
+  become: yes
 
 # Configure icons in Nautilus for some directories.
 - name: Set home folder icons
@@ -418,25 +520,24 @@
 
 # Install python extra packages and ensure they are up to date.
 - name: Ensure pip3 packages
-  pip: name='{{item}}' executable=pip3 state=latest
+  pip:
+    name: '{{item}}'
+    executable: pip3
+    state: latest
   loop:
-    # - ansible # Yo dawg i herd you like Ansible so we put a Ansible in yo Ansible so you can automate while u automate
-    - Django
+    - ansible # Yo dawg i herd you like Ansible so we put a Ansible in yo Ansible so you can automate while u automate
     - awscli
     - backupcpy
     - cloudsmith-cli
+    - django
     - docker-compose
-    - notebook
+    - fetchfox
     - jupyterlab
+    - notebook
     - pipenv
-  become: true
+  become: yes
 
-- name: Ensure fetchfox
-  pip: name='fetchfox' executable=pip3 state=present
-  notify: [ Install fetchfox stable ]
-  become: true
-
-- name: Make sure Wayland option is enabled
+- name: Make sure Wayland option is enabled for GDM3
   ini_file:
     path: /etc/gdm3/daemon.conf
     section: daemon
@@ -444,30 +545,40 @@
     value: 'true'
     mode: '0644'
     backup: yes
-  become: true
+  become: yes
 
 # Make sure system services we explicitly need are running and enabled.
-- name: Enable services
-  service: name='{{item}}' state=started enabled=yes
+- name: Enable and start system services
+  service:
+    name: '{{item}}'
+    state: started
+    enabled: yes
   loop:
     - dnsmasq
     - gdm
     - memcached
-    - nftables
+    - firewalld
     - resolvconf
     - ssh
   become: yes
 
 # Disable services we do not need.
-- name: Disable services
-  service: name='{{item}}' state=stopped enabled=no
+- name: Disable and stop not-needed system services
+  service:
+    name: '{{item}}'
+    state: stopped
+    enabled: no
   loop:
     - systemd-networkd
     - systemd-resolved
   become: yes
 
 - name: Install Node global packages (yarn)
-  yarn: name='{{item}}' global=yes state=latest production=yes
+  yarn:
+    name: '{{item}}'
+    global: yes
+    state: latest
+    production: yes
   loop:
     - '@angular/cli'
     - '@bitwarden/cli'
@@ -476,28 +587,27 @@
     - 'nativescript'
     - 'svgo'
   changed_when: false # ignore
-  become: true
+  become: yes
 
 - name: Install composer globally
   script:
-    cmd: scripts/composer-setup.sh
+    cmd: 'scripts/composer-setup.sh'
     chdir: /tmp
     creates: /usr/local/bin/composer
   changed_when: false # ignore
-  become: true
+  become: yes
 
 - name: Install Symfony CLI globally
   script:
-    cmd: scripts/symfony-setup.sh --install-dir=/usr/local/bin/
+    cmd: 'scripts/symfony-setup.sh --install-dir=/usr/local/bin/'
     chdir: /tmp
     creates: /usr/local/bin/symfony
   changed_when: false # ignore
-  become: true
+  become: yes
 
 - name: Install pyenv for own user
   script:
-    cmd: scripts/pyenv-setup.sh
+    cmd: 'scripts/pyenv-setup.sh'
     chdir: '/home/{{host_username}}'
     creates: '/home/{{host_username}}/.pyenv'
   changed_when: false # ignore
-  become: false

@@ -29,7 +29,3 @@
 
 - name: Install fetchfox stable
   shell: fetchfox stable
-
-- name: Reload nftables
-  service: name=nftables state=reloaded
-  become: true

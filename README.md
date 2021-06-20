@@ -20,17 +20,20 @@ This Ansible project is only guaranteed to be comptible with Debian 10 (buster).
 
 ## Goals and non-goals
 
-The goal is to be able to configure my environment on a fresh machine installs as fast as possible and with as few
-manual steps as possible. Having a production grade Ansible project is not a goal of this project, but I will try
-my best to keep the manifests somewhat maintainable for the benefit of my own sanity.
+The goal is to be able to configure my desktop environment on a fresh machine installs as fast as possible and with 
+as few manual steps as possible. 
+
+Having a production grade Ansible project is not a goal of this repository, however I will try my best to keep the roles and 
+such somewhat maintainable for the benefit of my own, personal sanity. If you are looking for examples on how to write
+production Ansible roles to be shared with others - this is NOT a good example (though it could help you
+get started). Many shortcuts have been taken here because it is acceptable to *me*.
 
 ## What is automated
 
 - Large portion of the operating system installation (see [autoinstall.conf](./autoinstall.conf)).
-- Personal dotfiles, shell, etc.
-- Nearly all the software I use on my workstations is setup automatically (sans user configs @ todo).
+- Personal dotfiles, shell setup, etc.
+- Nearly all the software I use on my workstations (sans user configs @ todo).
 - Defaults for themes, fonts, dconf settings for GNOME3 and extensions.
-- Firewall defaults.
 - Some security defaults, SSHD config etc.
 
 ## Components
@@ -53,14 +56,33 @@ some settings locally without having them later reverted by Ansible.
 
 ## How to use
 
-1. Set up machine with basic install of Debian with **no desktop environment**. Only base system and 
+### Using pre-seed (automated) installation
+
+1. Boot from Debian install ISO
+2. When the graphical installer boot menu appears, press ESC
+3. Type `auto url=https://raw.githubusercontent.com/Addvilz/dots/master/autoinstall.conf`
+4. Finish the installation and fill out whatever information was not provided by pre-seed (such as storage, etc.)
+5. SSH or sign in to the machine
+6. Change working directory to `/opt/dots`
+7. Edit `group_vars/all.yml` as required
+6. As a regular user (probably the same as in `group_vars/all.yml`), execute Ansible as shown bellow:
+
+`ansible-playbook -i hosts site.yml -K -C` to run Ansible in check mode.
+`ansible-playbook -i hosts site.yml -K` to run Ansible against localhost.
+
+Setup requires root privileges (but of course it does). Ansible will ask you for your password to become root user.
+This is required because Ansible automates package installation, changes settings only accessible to root etc.
+
+### Using manual installation
+
+1. Set up machine with basic installation of Debian with **no desktop environment**. Only base system and 
     "Standard system utilities" are required. SSH server is required if you plan to complete the installation remotely.
 3. Move to non-default TTY or SSH into the machine remotely.
 2. Install Ansible and other dependencies `sudo apt install python3 python3-pip git`
 3. Install Ansible `sudo pip3 install ansible`
 4. Clone this repository somewhere. I usually use `~/dots/`.
 5. Edit `group_vars/all` as required.
-6. As a regular user (probably the same as in `group_vars/all`), execute Ansible as shown bellow:
+6. As a regular user (probably the same as in `group_vars/all.yml`), execute Ansible as shown bellow:
 
 `ansible-playbook -i hosts site.yml -K -C` to run Ansible in check mode.
 `ansible-playbook -i hosts site.yml -K` to run Ansible against localhost.
@@ -73,7 +95,7 @@ This is required because Ansible automates package installation, changes setting
 1. Fork this repository.
 2. Review and modify [workstation main task collection](./roles/workstation/tasks/main.yml).
 3. Review and modify [files](./roles/workstation/files) and [templates](roles/workstation/templates).
-4. Review and modify [group_vars](./group_vars/all).
+4. Review and modify [group_vars](./group_vars/all.yml).
 5. Commit and push your changes to your fork. 
 6. Follow the "How to use" as described above.
 
@@ -82,12 +104,17 @@ This is required because Ansible automates package installation, changes setting
 
 ## Things not yet automated
 
-- Gnome shell extensions are not automatically installed, but are required - `Arc menu`, `Dash to panel`, `Openweather`, `User themes`.
-- JetBrains Toolbox (no deb available).
+- Gnome shell extensions are not automatically installed, but are required 
+    - Arc menu for GNOME [<3.34](https://extensions.gnome.org/extension/1228/arc-menu/), [>3.34](https://extensions.gnome.org/extension/3628/arcmenu/)
+    - [Dash to panel](https://extensions.gnome.org/extension/1160/dash-to-panel/)
+    - [OpenWeather](https://extensions.gnome.org/extension/750/openweather/)
+    - [UserThemes](https://extensions.gnome.org/extension/19/user-themes/)
+- [JetBrains Toolbox](https://www.jetbrains.com/toolbox-app/) (no deb available).
 
 ## Known issues
 
-- During initial setup, `dconf update` is not executed properly and needs to be run second time manually after all changes are applied.
+- During initial setup, `dconf update` might not be executed properly and might need to be run second time manually 
+  after all changes are applied. Simply sign in and run `dconf update` as `root`.
 
 ## Motivation
 
@@ -113,10 +140,8 @@ machines and keep their configuration more or less the same over extended period
 
 ## Credits
 
-Current wallpaper - re-scaled version of an [original photo](https://www.pexels.com/photo/antique-brick-wall-bricks-building-331986/), © [Kaique Rocha](https://www.pexels.com/@kaiquestr)
+Wallpaper artwork - "Small Memory" © [Mikael Gustafsson](https://mikaelgustafsson.art) - [Dribbble](https://dribbble.com/MikaelGustafsson) - [Twitter](https://twitter.com/mklgustafsson).
 
-Preview wallpaper artwork - "Small Memory" © [Mikael Gustafsson](https://mikaelgustafsson.art) - [Dribbble](https://dribbble.com/MikaelGustafsson) - [Twitter](https://twitter.com/mklgustafsson).
-
-## But but but my bootstrap scripts and manual copy pasting of everything?!
+## But but but my bootstrap scripts and manual copy-pasting of everything?!
 
 Haha Ansible manifests go brrr
