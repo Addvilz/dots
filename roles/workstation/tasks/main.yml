@@ -29,6 +29,7 @@
   loop:
     - apt-transport-https
     - arc-theme
+    - command-not-found
     - curl
     - debian-archive-keyring
     - debian-goodies

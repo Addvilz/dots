@@ -110,3 +110,5 @@ CARGODIR=`realpath -q $HOME/.cargo/`
 if [[ -n "$CARGODIR" && -d $CARGODIR ]]; then
   source $CARGODIR/env
 fi
+
+source /etc/zsh_command_not_found
