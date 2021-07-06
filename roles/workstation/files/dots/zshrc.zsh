@@ -87,8 +87,6 @@ test-video-feed-from-video() {
   ffmpeg -re -i "${1}" -f v4l2 "${2}"
 }
 
-eval "$(bw completion --shell zsh); compdef _bw bw;"
-
 if [[ $UID == 0 || $EUID == 0 ]]; then
   export PS1="%{$fg[cyan]%}[%~% ]%{$FG[202]%}[root]%(?.%{$fg[green]%}.%{$fg[red]%})%B$%b "
 fi

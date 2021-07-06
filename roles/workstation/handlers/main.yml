@@ -1,18 +1,6 @@
 ---
-- name: Restart NetworkManager
-  service: name=network-manager state=restarted
-  become: true
-
 - name: Restart sshd
   service: name=sshd state=restarted
-  become: true
-
-- name: Restart dnsmasq
-  service: name=dnsmasq state=restarted
-  become: true
-
-- name: Update resolvconf
-  shell: resolvconf -u
   become: true
 
 - name: Update APT

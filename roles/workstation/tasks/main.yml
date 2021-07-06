@@ -1,26 +1,4 @@
 ---
-# After installation, Debian retains CDROM entries in APT. They should be removed.
-- name: Remove cdrom entries in /apt/sources/list
-  lineinfile:
-    path: /etc/apt/sources.list
-    state: absent
-    regexp: '^deb cdrom'
-  notify: [ Update APT ]
-  become: yes
-
-# Ensure backports has a higher priority than release
-- name: Copy apt backports preferences to enable backports with high priority
-  copy:
-    src: apt_pin_backports
-    dest: /etc/apt/preferences.d/backports
-    mode: '0644'
-    owner: root
-    group: root
-  become: yes
-
-# Flush handlers for previous task.
-- meta: flush_handlers
-
 # Make sure relevant system and desktop support packages are installed.
 - name: Ensure base system packages
   package:
@@ -31,14 +9,8 @@
     - arc-theme
     - command-not-found
     - curl
-    - debian-archive-keyring
-    - debian-goodies
-    - debsecan
-    - debsums
-    - dnsmasq
     - dnsutils
     - file-roller
-    - firmware-linux
     - firewalld
     - firewall-config
     - gdm3
@@ -52,8 +24,6 @@
     - htop
     - libcanberra-gtk-module
     - libpam-tmpdir
-    - linux-headers-amd64
-    - linux-image-amd64
     - network-manager
     - network-manager-gnome
     - network-manager-openvpn
@@ -63,9 +33,6 @@
     - openvpn
     - p7zip
     - papirus-icon-theme
-    - plymouth
-    - plymouth-themes
-    - resolvconf
     - traceroute
     - unzip
     - wget
@@ -73,21 +40,6 @@
     - zip
     - zsh
   tags: [ packages ]
-  become: yes
-
-- name: Ensure using libcurl3-gnutls=7.64.0-4+deb10u2
-  package:
-    name: 'libcurl3-gnutls=7.64.0-4+deb10u2'
-    state: present
-  become: yes
-
-# Make sure these packages are absent
-- name: Ensure system packages that should be absent are removed
-  package:
-    name: '{{item}}'
-    state: absent
-  loop:
-    - apt-listbugs
   become: yes
 
 # Ensure relevant APT keys are present on the system to support extra repositories added later.
@@ -105,9 +57,8 @@
     - 'EB4C1BFD4F042F6DDDCCEC917721F63BD38B4796' # Google-2
     - 'AEE35447B5D3E4A69860622702F762CA6730E6A7' # libkafe
     - 'C80E383C3DE9F082E01391A0366C67DE91CA5D5F' # Lynis
-    - 'E162F504A20CDF15827F718D4B7C549A058F8B6B' # MongoDB v4.2 rel
+    - '20691EEC35216C63CAF66CE1656408E390CFB1F5' # MongoDB v4.4 rel
     - '9FD3B784BC1C6FC31A8A0A1C1655A0AB68576280' # NodeSource
-    - '15058500A0235D97F5D10063B188E2B695BD4743' # php-sury-org
     - 'D4040146BE3972509FD57FC71F3045A5DF7587C3' # Skype
     - 'DB085A08CA13B8ACB917E0F6D938EC0D038651BD' # Slack
     - '8FD3D9A8D3800305A9FFF259D1742AD60D811D58' # Spotify
@@ -125,15 +76,13 @@
   loop:
     - { file: 'adoptopenjdk', repo: 'deb https://adoptopenjdk.jfrog.io/adoptopenjdk/deb/ {{ansible_distribution_release}} main' }
     - { file: 'atom-editor', repo: 'deb [arch=amd64] https://packagecloud.io/AtomEditor/atom/any/ any main' }
-    - { file: 'docker', repo: 'deb [arch=amd64] https://download.docker.com/linux/debian {{ansible_distribution_release}} stable' }
+    - { file: 'docker', repo: 'deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ansible_distribution_release}} stable' }
     - { file: 'google-chrome', repo: 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' }
     - { file: 'google-cloud-sdk', repo: 'deb https://packages.cloud.google.com/apt cloud-sdk main' }
     - { file: 'insomnia', repo: 'deb [trusted=yes arch=amd64] https://download.konghq.com/insomnia-ubuntu/ default all' }
-    - { file: 'libkafe', repo: 'deb https://dl.cloudsmith.io/public/kafe/libkafe/deb/debian {{ansible_distribution_release}} main' }
-    - { file: 'lynis', repo: 'deb https://packages.cisofy.com/community/lynis/deb/ stable main' }
-    - { file: 'mongodb-4.2', repo: 'deb http://repo.mongodb.org/apt/debian {{ansible_distribution_release}}/mongodb-org/4.2 main' }
+    - { file: 'libkafe', repo: 'deb https://dl.cloudsmith.io/public/kafe/libkafe/deb/ubuntu {{ansible_distribution_release}} main' }
+    - { file: 'mongodb-4.4', repo: 'deb http://repo.mongodb.org/apt/ubuntu {{ansible_distribution_release}}/mongodb-org/4.4 universe' }
     - { file: 'nodejs', repo: 'deb https://deb.nodesource.com/node_12.x {{ansible_distribution_release}} main' }
-    - { file: 'php-sury-org', repo: 'deb https://packages.sury.org/php/ {{ansible_distribution_release}} main' }
     - { file: 'skype-stable', repo: 'deb [arch=amd64] https://repo.skype.com/deb stable main' }
     - { file: 'slack', repo: 'deb https://packagecloud.io/slacktechnologies/slack/debian/ jessie main' }
     - { file: 'spotify', repo: 'deb http://repository.spotify.com stable non-free' } # HTTP :(
@@ -156,7 +105,6 @@
     - clang-8
     - cloud-utils
     - cmake
-    - composer
     - cups
     - docker-ce
     - eiskaltdcpp
@@ -184,8 +132,6 @@
     - libreoffice-writer
     - libsqlite3-dev
     - libssh-dev
-    - linux-perf-5.8
-    - lynis
     - make
     - meld
     - memcached
@@ -212,60 +158,7 @@
     - virt-manager
     - virtualbox-6.1
     - vlc
-    - wrk
     - yarn
-    - zenmap
-  become: yes
-  tags: [ packages ]
-
-- name: Install PHP
-  package:
-    name: '{{item}}'
-    state: latest
-  loop:
-    # PHP 7.2
-    - php7.2-apcu
-    - php7.2-cli
-    - php7.2-curl
-    - php7.2-iconv
-    - php7.2-intl
-    - php7.2-json
-    - php7.2-mbstring
-    - php7.2-memcached
-    - php7.2-mysql
-    - php7.2-pdo
-    - php7.2-xml
-    # PHP 7.3
-    - php7.3-apcu
-    - php7.3-cli
-    - php7.3-curl
-    - php7.3-iconv
-    - php7.3-intl
-    - php7.3-json
-    - php7.3-mbstring
-    - php7.3-memcached
-    - php7.3-mysql
-    - php7.3-pdo
-    - php7.3-xml
-    # PHP 7.4
-    - php7.4-apcu
-    - php7.4-cli
-    - php7.4-curl
-    - php7.4-iconv
-    - php7.4-intl
-    - php7.4-json
-    - php7.4-mbstring
-    - php7.4-memcached
-    - php7.4-mysql
-    - php7.4-pdo
-    - php7.4-xml
-    # PHP 8.0
-    - php8.0-cli
-    - php8.0-curl
-    - php8.0-intl
-    - php8.0-mbstring
-    - php8.0-mysql
-    - php8.0-xml
   become: yes
   tags: [ packages ]
 
@@ -279,9 +172,7 @@
   loop:
     - { src: menu-icon.svg, dest: /etc/menu-icon.svg } # Used by Arc Menu GNOME extension.
     - { src: wallpaper.png, dest: /etc/wallpaper.png } # System default wallpaper
-    - { src: issue, dest: /etc/issue } # System banner
     - { src: issue.net, dest: /etc/issue.net } # System banner - for network clients
-    - { src: motd, dest: /etc/motd } # User motd
   become: yes
 
 # Ensure DCONF profile is present on the system. This deals with desktop customization and defaults.
@@ -323,17 +214,6 @@
   become: yes
 # END
 
-# Configure network manager
-- name: Copy NetworkManager.conf
-  copy:
-    src: NetworkManager.conf
-    dest: /etc/NetworkManager/NetworkManager.conf
-    mode: '0644'
-    owner: root
-    group: root
-  notify: [ Restart NetworkManager ]
-  become: yes
-
 # Configure SSH server
 - name: Copy sshd_config
   copy:
@@ -343,46 +223,6 @@
     owner: root
     group: root
   notify: [ Restart sshd ]
-  become: yes
-
-# Configure local caching DNS
-- name: Copy dnsmasq config
-  copy:
-    src: dnsmasq.conf
-    dest: /etc/dnsmasq.d/local.conf
-    mode: '0644'
-    owner: root
-    group: root
-  notify: [ Restart dnsmasq ]
-  become: yes
-
-# Ensure network interfaces are scanned in certain order for resolvconf
-- name: Copy interface-order
-  copy:
-    src: interface-order
-    dest: /etc/resolvconf/interface-order
-    mode: '0644'
-    owner: root
-    group: root
-  notify: [ Update resolvconf ]
-  become: yes
-
-# Configure default system UMASK (https://wiki.debian.org/Permissions)
-- name: Ensure default umask
-  lineinfile:
-    path: /etc/pam.d/common-session
-    line: 'session optional pam_umask.so umask=022'
-  become: yes
-
-# Configure boot screen
-- name: Configure boot screen
-  copy:
-    src: plymouthd.conf
-    dest: /etc/plymouth/plymouthd.conf
-    mode: '0644'
-    owner: root
-    group: root
-  notify: [ Update initramfs ]
   become: yes
 
 - name: Install oh-my-zsh for root
@@ -538,16 +378,6 @@
     - pipenv
   become: yes
 
-- name: Make sure Wayland option is enabled for GDM3
-  ini_file:
-    path: /etc/gdm3/daemon.conf
-    section: daemon
-    option: WaylandEnable
-    value: 'true'
-    mode: '0644'
-    backup: yes
-  become: yes
-
 # Make sure system services we explicitly need are running and enabled.
 - name: Enable and start system services
   service:
@@ -555,23 +385,10 @@
     state: started
     enabled: yes
   loop:
-    - dnsmasq
     - gdm
     - memcached
     - firewalld
-    - resolvconf
     - ssh
-  become: yes
-
-# Disable services we do not need.
-- name: Disable and stop not-needed system services
-  service:
-    name: '{{item}}'
-    state: stopped
-    enabled: no
-  loop:
-    - systemd-networkd
-    - systemd-resolved
   become: yes
 
 - name: Install Node global packages (yarn)
@@ -582,7 +399,6 @@
     production: yes
   loop:
     - '@angular/cli'
-    - '@bitwarden/cli'
     - '@vue/cli'
     - 'docusaurus-init'
     - 'nativescript'

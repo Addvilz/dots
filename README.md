@@ -9,6 +9,8 @@ New and upgraded dotfiles, now with Ansible!
 This is an Ansible project I use to configure and maintain my personal workstations, install software, manage
 dotfiles, manage the configuration and more.
 
+Note: this is a detached branch/fork that is designed to be used with Ubuntu LTS (20.04).
+
 ## Danger, Will Robinson!
 
 For obvious reasons, you **should not** apply this configuration on your own machine. Doing so **will break your stuff**,
@@ -16,7 +18,7 @@ For obvious reasons, you **should not** apply this configuration on your own mac
 vicinity. However, you can definitely use this repository to bootstrap your own setup and to try it all out on
 a disposable virtual machine.
 
-This Ansible project is only guaranteed to be comptible with Debian 10 (buster).
+The `ubuntu2004` brand is only guaranteed to be comptible with Ubuntu 20.04.
 
 ## Goals and non-goals
 
@@ -30,7 +32,6 @@ get started). Many shortcuts have been taken here because it is acceptable to *m
 
 ## What is automated
 
-- Large portion of the operating system installation (see [autoinstall.conf](./autoinstall.conf)).
 - Personal dotfiles, shell setup, etc.
 - Nearly all the software I use on my workstations (sans user configs @ todo).
 - Defaults for themes, fonts, dconf settings for GNOME3 and extensions.
@@ -43,8 +44,8 @@ get started). Many shortcuts have been taken here because it is acceptable to *m
 - [Dash to Panel](https://extensions.gnome.org/extension/1160/dash-to-panel/) extension.
 - [OpenWeather](https://extensions.gnome.org/extension/750/openweather/) extension.
 - [User Themes](https://extensions.gnome.org/extension/19/user-themes/) extension.
-- [Arc Dark](https://packages.debian.org/search?suite=default&section=all&arch=any&searchon=names&keywords=arc-theme) GTK theme and shell theme.
-- [Papirus Dark](https://packages.debian.org/search?suite=default&section=all&arch=any&searchon=names&keywords=papirus-icon-theme) icons.
+- [Arc Dark](https://packages.ubuntu.com/focal/arc-theme) GTK theme and shell theme.
+- [Papirus Dark](https://packages.ubuntu.com/focal/papirus-icon-theme) icons.
 - [IBM Plex](https://www.ibm.com/plex/) and [JetBrains Mono](https://www.jetbrains.com/lp/mono/) fonts.
 - ... software, tools, things.
 
@@ -56,27 +57,9 @@ some settings locally without having them later reverted by Ansible.
 
 ## How to use
 
-### Using pre-seed (automated) installation
-
-1. Boot from Debian install ISO
-2. When the graphical installer boot menu appears, press ESC
-3. Type `auto url=https://raw.githubusercontent.com/Addvilz/dots/master/autoinstall.conf`
-4. Finish the installation and fill out whatever information was not provided by pre-seed (such as storage, etc.)
-5. SSH or sign in to the machine
-6. Change working directory to `/opt/dots`
-7. Edit `group_vars/all.yml` as required
-6. As a regular user (probably the same as in `group_vars/all.yml`), execute Ansible as shown bellow:
-
-`ansible-playbook -i hosts site.yml -K -C` to run Ansible in check mode.
-`ansible-playbook -i hosts site.yml -K` to run Ansible against localhost.
-
-Setup requires root privileges (but of course it does). Ansible will ask you for your password to become root user.
-This is required because Ansible automates package installation, changes settings only accessible to root etc.
-
 ### Using manual installation
 
-1. Set up machine with basic installation of Debian with **no desktop environment**. Only base system and 
-    "Standard system utilities" are required. SSH server is required if you plan to complete the installation remotely.
+1. Set up machine with basic installation of Ubuntu 20.04. When prompted, select `minimal install`.
 3. Move to non-default TTY or SSH into the machine remotely.
 2. Install Ansible and other dependencies `sudo apt install python3 python3-pip git`
 3. Install Ansible `sudo pip3 install ansible`
@@ -105,7 +88,7 @@ This is required because Ansible automates package installation, changes setting
 ## Things not yet automated
 
 - Gnome shell extensions are not automatically installed, but are required 
-    - Arc menu for GNOME [<3.34](https://extensions.gnome.org/extension/1228/arc-menu/), [>3.34](https://extensions.gnome.org/extension/3628/arcmenu/)
+    - [Arc menu](https://extensions.gnome.org/extension/3628/arcmenu/)
     - [Dash to panel](https://extensions.gnome.org/extension/1160/dash-to-panel/)
     - [OpenWeather](https://extensions.gnome.org/extension/750/openweather/)
     - [UserThemes](https://extensions.gnome.org/extension/19/user-themes/)
@@ -115,28 +98,6 @@ This is required because Ansible automates package installation, changes setting
 
 - During initial setup, `dconf update` might not be executed properly and might need to be run second time manually 
   after all changes are applied. Simply sign in and run `dconf update` as `root`.
-
-## Motivation
-
-Till about June 2020, Elementary was my distribution of choice for all of my personal workstation machines. All of them
-were semi-managed using a combination of shell scripts and manual work.
-
-Several changes in Elementary itself, Ubuntu upstream, and some less objective reasons (I was really bored one night)
-lead me to the decision that Elementary might no longer fit my personal use case as well as it did when I first
-started using it. GNOME has changed a lot since 2012, and so has everything related to it.
-
-I tried several distributions for a couple of days each to determine how they could integrate into my workflows and daily
-life, finally settling on Debian with which I have a long prior history - it is my operating system of choice for all my
-personal servers, and was my main desktop operating system before mid-2012, before I moved to Elementary. In fact,
-the very first Linux operating system I was ever exposed to was Debian, version 2.2 at the time - almost 20 years ago.
-
-While having a spare machine set aside to try an operating system is fairly trivial, moving your entire "baggage" of tools,
-configuration and software to similar, albeit somewhat different distribution is not nearly so - especially if you
-have multiple machines to maintain - several of which I use daily with several more that I use occasionally, but
-still require having the same setup as my daily use machines.
-
-This Ansible project was created to deal with the issue of synchronizing the working environments across all of my physical
-machines and keep their configuration more or less the same over extended periods of time.
 
 ## Credits
 
