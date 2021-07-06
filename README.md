@@ -18,7 +18,7 @@ For obvious reasons, you **should not** apply this configuration on your own mac
 vicinity. However, you can definitely use this repository to bootstrap your own setup and to try it all out on
 a disposable virtual machine.
 
-The `ubuntu2004` brand is only guaranteed to be comptible with Ubuntu 20.04.
+The `ubuntu2004` branch is only guaranteed to be comptible with Ubuntu 20.04.
 
 ## Goals and non-goals
 
