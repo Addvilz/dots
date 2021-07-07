@@ -64,8 +64,12 @@ some settings locally without having them later reverted by Ansible.
 2. Install Ansible and other dependencies `sudo apt install python3 python3-pip git`
 3. Install Ansible `sudo pip3 install ansible`
 4. Clone this repository somewhere. I usually use `~/dots/`.
-5. Edit `group_vars/all` as required.
-6. As a regular user (probably the same as in `group_vars/all.yml`), execute Ansible as shown bellow:
+5. `git checkout ubuntu2004`
+6. Edit `group_vars/all` as required.
+7. As a regular user (probably the same as in `group_vars/all.yml`), execute Ansible as shown bellow.
+8. Reboot your host - this is required for some initial config changes to become effective. 
+9. During next login, choose `GNOME session`. Most of the customizations will work with `Ubuntu session` as well,
+   however, GNOME session will look a bit more integrated.
 
 `ansible-playbook -i hosts site.yml -K -C` to run Ansible in check mode.
 `ansible-playbook -i hosts site.yml -K` to run Ansible against localhost.
