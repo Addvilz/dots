@@ -16,7 +16,8 @@ For obvious reasons, you **should not** apply this configuration on your own mac
 vicinity. However, you can definitely use this repository to bootstrap your own setup and to try it all out on
 a disposable virtual machine.
 
-This Ansible project is only guaranteed to be comptible with Debian 10 (buster).
+The master branch is comptible with Debian 10 (buster). There is a specific branch designed for 
+[Ubuntu 20.04](https://github.com/Addvilz/dots/tree/ubuntu2004).
 
 ## Goals and non-goals
 
