@@ -1,0 +1,9 @@
+host_username: 'matiss'
+git_email: 'matiss@hub256.com'
+git_name: 'Matīss Treinis'
+git_signing_key: '3B44AE79519B1C6552941B109123B913EBF53D43'
+git_commit_gpgsign: 'true'
+git_diff_tool: 'meld'
+git_push_default: 'current'
+authorized_keys: '{{ lookup("file", "../files/id_rsa.pub") }}'
+

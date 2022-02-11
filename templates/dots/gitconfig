@@ -1,0 +1,12 @@
+[core]
+	excludesfile = ~/.gitignore
+[user]
+	email = {{git_email}}
+	name = {{git_name}}
+	signingkey = {{git_signing_key}}
+[push]
+	default = {{git_push_default}}
+[commit]
+	gpgsign = {{git_commit_gpgsign}}
+[diff]
+	tool = {{git_diff_tool}}

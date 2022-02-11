@@ -1,0 +1,32 @@
+"*":
+  core:
+    disabledPackages: [
+      "welcome"
+    ]
+    ignoredNames: [
+      ".git"
+      ".hg"
+      ".svn"
+      ".DS_Store"
+      "._*"
+      "Thumbs.db"
+      "desktop.ini"
+      ".idea"
+    ]
+    telemetryConsent: "no"
+  editor:
+    fontFamily: "JetBrains Mono, monospace"
+    fontSize: 14
+    preferredLineLength: 120
+    scrollPastEnd: true
+    showLineNumbers: false
+    softWrap: true
+    softWrapAtPreferredLineLength: true
+  "markdown-preview": {}
+  "one-dark-ui": {}
+  "spell-check":
+    locales: [
+      "en-US"
+    ]
+  welcome:
+    showOnStartup: false

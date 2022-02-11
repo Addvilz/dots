@@ -1,0 +1,345 @@
+---
+- name: Configure Fedora workstation
+  hosts: workstation
+  remote_user: matiss
+  vars:
+    host_username: 'matiss'
+    git_email: 'matiss@hub256.com'
+    git_name: 'Matīss Treinis'
+    git_signing_key: '3B44AE79519B1C6552941B109123B913EBF53D43'
+    git_commit_gpgsign: 'true'
+    git_diff_tool: 'meld'
+    git_push_default: 'current'
+    authorized_keys: '{{ lookup("file", "files/id_rsa.pub") }}'
+  handlers:
+    - name: Restart sshd
+      service: name=sshd state=restarted
+      become: true
+    - name: Update dconf
+      shell: dconf update
+      become: true
+    - name: Update initramfs
+      shell: update-initramfs -u
+      become: true
+  tasks:
+    - name: Install base system packages
+      package:
+        name: '{{item}}'
+        state: latest
+      loop:
+        - arc-theme
+        - curl
+        - dnsutils
+        - file-roller
+        - git
+        - git-extras
+        - gnome-tweaks
+        - gnome-shell-extension-caffeine
+        - gnome-shell-extension-openweather
+        - gnome-extensions-app
+        - gnupg
+        - hexedit
+        - htop
+        - openvpn
+        - NetworkManager-openvpn
+        - NetworkManager-openvpn-gnome
+        - p7zip
+        - python3
+        - python3-pip
+        - papirus-icon-theme
+        - traceroute
+        - unzip
+        - wget
+        - whois
+        - zip
+        - zsh
+      tags: [ packages ]
+      become: yes
+
+    - name: Add RPMFusion GPG keys
+      rpm_key:
+        state: present
+        key: '{{item}}'
+      loop:
+        - 'https://rpmfusion.org/keys?action=AttachFile&do=get&target=RPM-GPG-KEY-rpmfusion-free-fedora-2020'
+        - 'https://rpmfusion.org/keys?action=AttachFile&do=get&target=RPM-GPG-KEY-rpmfusion-nonfree-fedora-2020'
+      become: yes
+
+    - name: Install rpmfusion repo packages
+      dnf:
+        name: '{{ item }}'
+        state: present
+      loop:
+        - 'https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ansible_distribution_major_version}}.noarch.rpm'
+        - 'https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ansible_distribution_major_version}}.noarch.rpm'
+      become: yes
+
+    - name: Install workstation packages
+      package:
+        name: '{{item}}'
+        state: latest
+      loop:
+        #- atom
+        - clang
+        - cloud-utils
+        - cmake
+        #- composer
+        - cups
+        - moby-engine
+        - ffmpeg
+        - filezilla
+        - geary
+        - gimp
+        #- google-chrome-stable
+        - inkscape
+        #- insomnia
+        #- kafe-cli
+        - libreoffice-base
+        - libreoffice-calc
+        - libreoffice-impress
+        - libreoffice-writer
+        - make
+        - meld
+        #- skypeforlinux
+        #- slack-desktop
+        - lpf-spotify-client
+        - sshpass
+        #- telegram-desktop
+        - terminator
+        - tmux
+        #- tmuxinator
+        - transmission
+        - uget
+        - valgrind
+        - vinagre
+        - virt-manager
+        #- virtualbox-6.1
+        - vlc
+        #- wrk
+        #- yarn
+        #- zenmap
+      become: yes
+      tags: [ packages ]
+
+    - name: Ensure system files
+      copy:
+        src: '{{item.src}}'
+        dest: '{{item.dest}}'
+        mode: '0644'
+        owner: root
+        group: root
+      loop:
+        - { src: menu-icon.svg, dest: /etc/menu-icon.svg } # Used by Arc Menu GNOME extension.
+        - { src: wallpaper.jpg, dest: /etc/wallpaper.jpg } # System default wallpaper
+      become: yes
+
+    - name: Configure DCONF
+      file:
+        path: /etc/dconf/profile
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      become: yes
+
+    - name: Copy dconf user profile config
+      copy:
+        src: dconf_profile_user
+        dest: /etc/dconf/profile/user
+        mode: '0644'
+        owner: root
+        group: root
+      become: yes
+
+    - name: Create /etc/dconf/db/local.d
+      file:
+        path: /etc/dconf/db/local.d
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      become: yes
+
+    - name: Update dconf settings
+      copy:
+        src: dconf_settings.ini
+        dest: /etc/dconf/db/local.d/00-global
+        mode: '0644'
+        owner: root
+        group: root
+      notify: [ Update dconf ]
+      become: yes
+      tags: ['tmp']
+
+    - name: Configure boot screen
+      copy:
+        src: plymouthd.conf
+        dest: /etc/plymouth/plymouthd.conf
+        mode: '0644'
+        owner: root
+        group: root
+      notify: [ Update initramfs ]
+      become: yes
+
+    - name: Install oh-my-zsh for self
+      script:
+        cmd: 'scripts/oh-my-zsh-setup.sh --unattended --keep-zshrc'
+        chdir: '/home/{{host_username}}'
+        creates: '/home/{{host_username}}/.oh-my-zsh'
+      changed_when: false # ignore
+
+    - name: Install oh-my-zsh for root
+      script:
+        cmd: 'scripts/oh-my-zsh-setup.sh --unattended --keep-zshrc'
+        creates: '/root/.oh-my-zsh'
+      changed_when: false # ignore
+      become: yes
+
+    - name: Install fonts
+      copy:
+        src: fonts/
+        dest: /usr/local/share/fonts
+      become: yes
+
+    - name: Ensure group "docker" exists
+      group:
+        name: docker
+        state: present
+      become: yes
+
+    - name: Update own user profile
+      user:
+        name: '{{host_username}}'
+        shell: /bin/zsh
+        groups: docker
+        append: yes
+        create_home: yes
+        password: '*' # Initial password is none, account locked
+        update_password: on_create # Do not reset password from ansible
+      become: yes
+
+    - name: Set root shell to zsh
+      user:
+        name: root
+        shell: /bin/zsh
+      become: yes
+
+    - name: Create ~/.ssh/
+      file:
+        path: '/home/{{host_username}}/.ssh'
+        state: directory
+        mode: '0700'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+      become: yes
+
+    - name: Create ~/.atom/
+      file:
+        path: '/home/{{host_username}}/.atom'
+        state: directory
+        mode: '0700'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+      become: yes
+
+    - name: Ensure personal dot files
+      copy:
+        src: '{{item.src}}'
+        dest: '{{item.dest}}'
+        mode: '0600'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+      loop:
+        - { src: dots/zshrc.zsh, dest: '/home/{{host_username}}/.zshrc' }
+        - { src: dots/tmux.conf, dest: '/home/{{host_username}}/.tmux.conf' }
+        - { src: dots/editorconfig, dest: '/home/{{host_username}}/.editorconfig' }
+        - { src: dots/wgetrc, dest: '/home/{{host_username}}/.wgetrc' }
+        - { src: dots/gitignore, dest: '/home/{{host_username}}/.gitignore' }
+        - { src: dots/curlrc, dest: '/home/{{host_username}}/.curlrc' }
+        - { src: dots/.atom/config.cson, dest: '/home/{{host_username}}/.atom/config.cson' }
+        - { src: dots/.atom/styles.less, dest: '/home/{{host_username}}/.atom/styles.less' }
+
+    - name: Ensure root dot files
+      copy:
+        src: '{{item.src}}'
+        dest: '{{item.dest}}'
+        mode: '0600'
+        owner: root
+        group: root
+      loop:
+        - { src: dots/zshrc.zsh, dest: '/root/.zshrc' }
+        - { src: dots/editorconfig, dest: '/root/.editorconfig' }
+        - { src: dots/wgetrc, dest: '/root/.wgetrc' }
+        - { src: dots/curlrc, dest: '/root/.curlrc' }
+      become: yes
+
+    - name: Ensure personal files (from templates)
+      template:
+        src: '{{item.src}}'
+        dest: '{{item.dest}}'
+        mode: '0600'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+      loop:
+        - { src: dots/gitconfig, dest: '/home/{{host_username}}/.gitconfig' }
+        - { src: dots/authorized_keys, dest: '/home/{{host_username}}/.ssh/authorized_keys' }
+
+    - name: Ensure default directories in home
+      file:
+        path: '{{item}}'
+        state: directory
+        mode: '0700'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+      loop:
+        - '/home/{{host_username}}/dots'
+        - '/home/{{host_username}}/CLionProjects'
+        - '/home/{{host_username}}/IdeaProjects'
+      become: yes
+
+    # Configure icons in Nautilus for some directories.
+    - name: Set home folder icons
+      shell: 'gio set -t string {{item.dir}} metadata::custom-icon file://{{item.icon}}'
+      changed_when: false # Really not that important...
+      loop:
+        - { dir: '/home/{{host_username}}/CLionProjects', icon: '/usr/share/icons/Papirus/64x64/places/folder-cyan-development.svg' }
+        - { dir: '/home/{{host_username}}/IdeaProjects', icon: '/usr/share/icons/Papirus/64x64/places/folder-pink-development.svg' }
+        - { dir: '/home/{{host_username}}/dots', icon: '/usr/share/icons/Papirus/64x64/places/folder-orange-development.svg' }
+
+    # Install python extra packages and ensure they are up to date.
+    - name: Ensure pip3 packages
+      pip:
+        name: '{{item}}'
+        executable: pip3
+        state: latest
+      loop:
+        - ansible # Yo dawg i herd you like Ansible so we put a Ansible in yo Ansible so you can automate while u automate
+        - awscli
+        - cloudsmith-cli
+        - django
+        - docker-compose
+        - pipenv
+      become: yes
+
+#    - name: Install composer globally
+#      script:
+#        cmd: 'scripts/composer-setup.sh'
+#        chdir: /tmp
+#        creates: /usr/local/bin/composer
+#      changed_when: false # ignore
+#      become: yes
+#
+#    - name: Install Symfony CLI globally
+#      script:
+#        cmd: 'scripts/symfony-setup.sh --install-dir=/usr/local/bin/'
+#        chdir: /tmp
+#        creates: /usr/local/bin/symfony
+#      changed_when: false # ignore
+#      become: yes
+
+    - name: Install pyenv for own user
+      script:
+        cmd: 'scripts/pyenv-setup.sh'
+        chdir: '/home/{{host_username}}'
+        creates: '/home/{{host_username}}/.pyenv'
+      changed_when: false # ignore

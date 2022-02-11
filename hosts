@@ -1,0 +1,6 @@
+[all:vars]
+ansible_connection=ssh
+
+# Normally - localhost
+[workstation]
+localhost ansible_host=localhost ansible_connection=local ansible_python_interpreter=/usr/bin/python3
