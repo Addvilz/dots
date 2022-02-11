@@ -27,99 +27,132 @@
         name: '{{item}}'
         state: latest
       loop:
+        - NetworkManager-openvpn
+        - NetworkManager-openvpn-gnome
         - arc-theme
         - curl
         - dnsutils
         - file-roller
         - git
         - git-extras
-        - gnome-tweaks
+        - gnome-extensions-app
         - gnome-shell-extension-caffeine
         - gnome-shell-extension-openweather
-        - gnome-extensions-app
+        - gnome-tweaks
         - gnupg
         - hexedit
         - htop
         - openvpn
-        - NetworkManager-openvpn
-        - NetworkManager-openvpn-gnome
         - p7zip
+        - papirus-icon-theme
         - python3
         - python3-pip
-        - papirus-icon-theme
         - traceroute
         - unzip
         - wget
         - whois
         - zip
         - zsh
-      tags: [ packages ]
+      tags: [ 'base_packages', 'packages' ]
       become: yes
 
-    - name: Add RPMFusion GPG keys
+    - name: Add RPM keys (.rpm repos)
       rpm_key:
         state: present
         key: '{{item}}'
       loop:
         - 'https://rpmfusion.org/keys?action=AttachFile&do=get&target=RPM-GPG-KEY-rpmfusion-free-fedora-2020'
         - 'https://rpmfusion.org/keys?action=AttachFile&do=get&target=RPM-GPG-KEY-rpmfusion-nonfree-fedora-2020'
+        - 'https://rpms.remirepo.net/RPM-GPG-KEY-remi2021'
       become: yes
+      tags: [ 'repositories' ]
 
-    - name: Install rpmfusion repo packages
+    - name: Install repositories (.rpm)
       dnf:
         name: '{{ item }}'
         state: present
       loop:
         - 'https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ansible_distribution_major_version}}.noarch.rpm'
         - 'https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ansible_distribution_major_version}}.noarch.rpm'
+        - 'https://rpms.remirepo.net/fedora/remi-release-{{ansible_distribution_major_version}}.rpm'
       become: yes
+      tags: [ 'repositories' ]
+
+    - name: Enable repositories
+      shell: 'dnf config-manager --set-enabled {{item}}'
+      register: dnf_set_enabled
+      loop:
+        - google-chrome
+        - remi
+        - remi-php81
+        - rpmfusion-free
+        - rpmfusion-free-updates
+        - rpmfusion-nonfree
+        - rpmfusion-nonfree-updates
+      become: yes
+      tags: [ 'repositories' ]
+      changed_when: false
 
     - name: Install workstation packages
       package:
         name: '{{item}}'
         state: latest
       loop:
-        #- atom
+        - VirtualBox
         - clang
         - cloud-utils
         - cmake
-        #- composer
         - cups
-        - moby-engine
         - ffmpeg
         - filezilla
+        - fzf
         - geary
         - gimp
-        #- google-chrome-stable
+        - google-chrome-stable
         - inkscape
-        #- insomnia
-        #- kafe-cli
         - libreoffice-base
         - libreoffice-calc
         - libreoffice-impress
         - libreoffice-writer
         - make
         - meld
-        #- skypeforlinux
-        #- slack-desktop
-        - lpf-spotify-client
+        - moby-engine
+        - rubygems
         - sshpass
-        #- telegram-desktop
         - terminator
         - tmux
-        #- tmuxinator
         - transmission
         - uget
         - valgrind
-        - vinagre
         - virt-manager
-        #- virtualbox-6.1
         - vlc
-        #- wrk
-        #- yarn
-        #- zenmap
       become: yes
-      tags: [ packages ]
+      tags: [ 'packages' ]
+
+    - name: Add the flathub repository
+      flatpak_remote:
+        name: flathub
+        state: present
+        flatpakrepo_url: https://dl.flathub.org/repo/flathub.flatpakrepo
+      become: yes
+      tags: [ 'packages', 'flatpak' ]
+
+    - name: Install Flatpak packages
+      flatpak:
+        name:
+          - com.bitwarden.desktop
+          - com.mattermost.Desktop
+          - com.skype.Client
+          - com.slack.Slack
+          - com.spotify.Client
+          - com.valvesoftware.Steam
+          - io.atom.Atom
+          - org.signal.Signal
+          - org.telegram.desktop
+          - rest.insomnia.Insomnia
+          - us.zoom.Zoom
+      become: yes
+      tags: [ 'packages', 'flatpak' ]
 
     - name: Ensure system files
       copy:
@@ -169,7 +202,7 @@
         group: root
       notify: [ Update dconf ]
       become: yes
-      tags: ['tmp']
+      tags: [ 'tmp' ]
 
     - name: Configure boot screen
       copy:
@@ -233,15 +266,6 @@
         group: '{{host_username}}'
       become: yes
 
-    - name: Create ~/.atom/
-      file:
-        path: '/home/{{host_username}}/.atom'
-        state: directory
-        mode: '0700'
-        owner: '{{host_username}}'
-        group: '{{host_username}}'
-      become: yes
-
     - name: Ensure personal dot files
       copy:
         src: '{{item.src}}'
@@ -256,8 +280,9 @@
         - { src: dots/wgetrc, dest: '/home/{{host_username}}/.wgetrc' }
         - { src: dots/gitignore, dest: '/home/{{host_username}}/.gitignore' }
         - { src: dots/curlrc, dest: '/home/{{host_username}}/.curlrc' }
-        - { src: dots/.atom/config.cson, dest: '/home/{{host_username}}/.atom/config.cson' }
-        - { src: dots/.atom/styles.less, dest: '/home/{{host_username}}/.atom/styles.less' }
+        - { src: dots/.atom/config.cson, dest: '/home/{{host_username}}/.var/app/io.atom.Atom/data/config.cson' }
+        - { src: dots/.atom/styles.less, dest: '/home/{{host_username}}/.var/app/io.atom.Atom/data/styles.less' }
+      tags: [ 'dots' ]
 
     - name: Ensure root dot files
       copy:
@@ -272,6 +297,7 @@
         - { src: dots/wgetrc, dest: '/root/.wgetrc' }
         - { src: dots/curlrc, dest: '/root/.curlrc' }
       become: yes
+      tags: [ 'dots' ]
 
     - name: Ensure personal files (from templates)
       template:
@@ -321,21 +347,65 @@
         - pipenv
       become: yes
 
-#    - name: Install composer globally
-#      script:
-#        cmd: 'scripts/composer-setup.sh'
-#        chdir: /tmp
-#        creates: /usr/local/bin/composer
-#      changed_when: false # ignore
-#      become: yes
-#
-#    - name: Install Symfony CLI globally
-#      script:
-#        cmd: 'scripts/symfony-setup.sh --install-dir=/usr/local/bin/'
-#        chdir: /tmp
-#        creates: /usr/local/bin/symfony
-#      changed_when: false # ignore
-#      become: yes
+    - name: Remove global, default PHP, if installed
+      package:
+        name: '{{item}}'
+        state: absent
+      loop:
+        - php-cli
+        - php-fpm
+        - php-comn
+      tags: [ 'php', 'packages' ]
+      become: yes
+
+    - name: Install PHP packages
+      package:
+        name: '{{item}}'
+        state: latest
+      loop:
+        # PHP8.1
+        - php81-php-cli
+        - php81-php-curl
+        - php81-php-devel
+        - php81-php-gd
+        - php81-php-gmp
+        - php81-php-intl
+        - php81-php-intl
+        - php81-php-ldap
+        - php81-php-mbstring
+        - php81-php-mysqlnd
+        - php81-php-pdo
+        - php81-php-xml
+      tags: [ 'php', 'packages' ]
+      become: yes
+
+    - name: Link PHP binary to point to usable version
+      file:
+        src: /usr/bin/php81
+        dest: /usr/bin/php
+        owner: root
+        group: root
+        state: link
+      become: yes
+      tags: [ 'php' ]
+
+    - name: Install composer globally
+      script:
+        cmd: 'scripts/composer-setup.sh'
+        chdir: /tmp
+        creates: /usr/local/bin/composer
+      changed_when: false # ignore
+      tags: [ 'php' ]
+      become: yes
+
+    - name: Install Symfony CLI globally
+      script:
+        cmd: 'scripts/symfony-setup.sh --install-dir=/usr/local/bin/'
+        chdir: /tmp
+        creates: /usr/local/bin/symfony
+      changed_when: false # ignore
+      tags: [ 'php' ]
+      become: yes
 
     - name: Install pyenv for own user
       script:

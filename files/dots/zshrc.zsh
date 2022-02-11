@@ -1,7 +1,7 @@
 export ZSH=~/.oh-my-zsh
 
 if ! [ -d "$ZSH" ]; then
-  echo "oh-my-zsh not present"
+  echo 'oh-my-zsh not present'
   return
 fi
 
@@ -13,7 +13,7 @@ fi
 
 export VISUAL=$EDITOR
 
-ZSH_THEME="gallois"
+ZSH_THEME='gallois'
 
 plugins=(git git-extras python pip sudo systemd wd command-not-found zsh-interactive-cd)
 
@@ -21,8 +21,9 @@ export PATH=${HOME}/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin
 
 source $ZSH/oh-my-zsh.sh
 
-alias l="ls -lAFh --color=always --group-directories-first"
-alias gogogadget="ansible-playbook -i hosts site.yml -K"
+alias l='ls -lAFh --color=always --group-directories-first'
+alias gogogadget='ansible-playbook -i hosts site.yml -K'
+alias mux='tmuxinator'
 
 # Functions
 function cd {
@@ -79,14 +80,6 @@ take-cwd-ownership() {
   fi
 }
 
-test-video-feed-from-picture() {
-  ffmpeg -loop 1 -re -i "${1}" -f v4l2 -vcodec rawvideo -pix_fmt yuv420p "${2}"
-}
-
-test-video-feed-from-video() {
-  ffmpeg -re -i "${1}" -f v4l2 "${2}"
-}
-
 if [[ $UID == 0 || $EUID == 0 ]]; then
   export PS1="%{$fg[cyan]%}[%~% ]%{$FG[202]%}[root]%(?.%{$fg[green]%}.%{$fg[red]%})%B$%b "
 fi
@@ -108,5 +101,3 @@ CARGODIR=`realpath -q $HOME/.cargo/`
 if [[ -n "$CARGODIR" && -d $CARGODIR ]]; then
   source $CARGODIR/env
 fi
-
-source /etc/zsh_command_not_found
