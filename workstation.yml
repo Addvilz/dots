@@ -33,6 +33,7 @@
         - curl
         - dnsutils
         - file-roller
+        - firewall-config
         - git
         - git-extras
         - gnome-extensions-app
@@ -82,7 +83,6 @@
       shell: 'dnf config-manager --set-enabled {{item}}'
       register: dnf_set_enabled
       loop:
-        - google-chrome
         - remi
         - remi-php81
         - rpmfusion-free
@@ -99,6 +99,7 @@
         state: latest
       loop:
         - VirtualBox
+        - chromium-freeworld
         - clang
         - cloud-utils
         - cmake
@@ -108,7 +109,6 @@
         - fzf
         - geary
         - gimp
-        - google-chrome-stable
         - inkscape
         - libreoffice-base
         - libreoffice-calc
@@ -116,7 +116,9 @@
         - libreoffice-writer
         - make
         - meld
+        - micro
         - moby-engine
+        - ncdu
         - rubygems
         - sshpass
         - terminator
@@ -128,6 +130,15 @@
         - vlc
       become: yes
       tags: [ 'packages' ]
+
+    - name: Remove not-needed packages
+      package:
+        name: '{{item}}'
+        state: absent
+      loop:
+        - fedora-chromium-config
+      tags: [ 'packages' ]
+      become: yes
 
     - name: Add the flathub repository
       flatpak_remote:
