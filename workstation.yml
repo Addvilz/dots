@@ -119,8 +119,11 @@
         - micro
         - moby-engine
         - ncdu
+        - nmap
+        - nodejs
         - rubygems
         - sshpass
+        - syncthing
         - terminator
         - tmux
         - transmission
@@ -128,6 +131,7 @@
         - valgrind
         - virt-manager
         - vlc
+        - yarnpkg
       become: yes
       tags: [ 'packages' ]
 
@@ -156,6 +160,7 @@
           - com.skype.Client
           - com.slack.Slack
           - com.spotify.Client
+          - com.usedbottles.bottles
           - com.valvesoftware.Steam
           - io.atom.Atom
           - org.signal.Signal
@@ -330,18 +335,36 @@
         group: '{{host_username}}'
       loop:
         - '/home/{{host_username}}/dots'
-        - '/home/{{host_username}}/CLionProjects'
-        - '/home/{{host_username}}/IdeaProjects'
+        - '/home/{{host_username}}/Projects'
+        - '/home/{{host_username}}/Projects/Work'
+        - '/home/{{host_username}}/Projects/Work/Archive'
+        - '/home/{{host_username}}/Projects/Work/Scratch'
+        - '/home/{{host_username}}/Projects/Personal'
+        - '/home/{{host_username}}/Projects/Personal/Archive'
+        - '/home/{{host_username}}/Projects/Personal/Scratch'
+        - '/home/{{host_username}}/Documents/Work/Archive'
+        - '/home/{{host_username}}/Documents/Personal/Archive'
       become: yes
+      tags: [ 'dir-structure' ]
 
     # Configure icons in Nautilus for some directories.
     - name: Set home folder icons
       shell: 'gio set -t string {{item.dir}} metadata::custom-icon file://{{item.icon}}'
       changed_when: false # Really not that important...
       loop:
-        - { dir: '/home/{{host_username}}/CLionProjects', icon: '/usr/share/icons/Papirus/64x64/places/folder-cyan-development.svg' }
-        - { dir: '/home/{{host_username}}/IdeaProjects', icon: '/usr/share/icons/Papirus/64x64/places/folder-pink-development.svg' }
-        - { dir: '/home/{{host_username}}/dots', icon: '/usr/share/icons/Papirus/64x64/places/folder-orange-development.svg' }
+        - { dir: '/home/{{host_username}}/dots', icon: '/usr/share/icons/Papirus/64x64/places/folder-orange-sync.svg' }
+        - { dir: '/home/{{host_username}}/Projects', icon: '/usr/share/icons/Papirus/64x64/places/folder-magenta-projects.svg' }
+        - { dir: '/home/{{host_username}}/Projects/Work', icon: '/usr/share/icons/Papirus/64x64/places/folder-red-projects.svg' }
+        - { dir: '/home/{{host_username}}/Projects/Work/Archive', icon: '/usr/share/icons/Papirus/64x64/places/folder-red-tar.svg' }
+        - { dir: '/home/{{host_username}}/Projects/Work/Scratch', icon: '/usr/share/icons/Papirus/64x64/places/folder-red-java.svg' }
+        - { dir: '/home/{{host_username}}/Projects/Personal', icon: '/usr/share/icons/Papirus/64x64/places/folder-teal-projects.svg' }
+        - { dir: '/home/{{host_username}}/Projects/Personal/Archive', icon: '/usr/share/icons/Papirus/64x64/places/folder-teal-tar.svg' }
+        - { dir: '/home/{{host_username}}/Projects/Personal/Scratch', icon: '/usr/share/icons/Papirus/64x64/places/folder-teal-java.svg' }
+        - { dir: '/home/{{host_username}}/Documents/Work', icon: '/usr/share/icons/Papirus/64x64/places/folder-red-documents.svg' }
+        - { dir: '/home/{{host_username}}/Documents/Work/Archive', icon: '/usr/share/icons/Papirus/64x64/places/folder-red-tar.svg' }
+        - { dir: '/home/{{host_username}}/Documents/Personal', icon: '/usr/share/icons/Papirus/64x64/places/folder-teal-documents.svg' }
+        - { dir: '/home/{{host_username}}/Documents/Personal/Archive', icon: '/usr/share/icons/Papirus/64x64/places/folder-teal-tar.svg' }
+      tags: [ 'dir-structure' ]
 
     # Install python extra packages and ensure they are up to date.
     - name: Ensure pip3 packages
