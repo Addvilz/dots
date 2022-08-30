@@ -33,7 +33,6 @@ started). Many shortcuts have been taken here because it is acceptable to *me*.
 
 ## What is automated
 
-- Large portion of the operating system installation (see [autoinstall.conf](./autoinstall.conf)).
 - Personal dotfiles, shell setup, etc.
 - Nearly all the software I use on my workstations (sans user configs @ todo).
 - Defaults for themes, fonts, dconf settings for GNOME3 and extensions.
