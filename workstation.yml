@@ -388,7 +388,7 @@
       loop:
         - php-cli
         - php-fpm
-        - php-comn
+        - php-common
       tags: [ 'php', 'packages' ]
       become: yes
 
