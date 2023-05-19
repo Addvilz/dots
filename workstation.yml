@@ -1,8 +1,10 @@
 ---
 - name: Configure Fedora workstation
   hosts: workstation
+  # Edit as needed if executing remotely
   remote_user: matiss
   vars:
+    # Update these variables as needed to match your own settings.
     host_username: 'matiss'
     git_email: 'matiss@hub256.com'
     git_name: 'Matīss Treinis'
@@ -12,51 +14,13 @@
     git_push_default: 'current'
     authorized_keys: '{{ lookup("file", "files/id_rsa.pub") }}'
   handlers:
-    - name: Restart sshd
-      service: name=sshd state=restarted
-      become: true
     - name: Update dconf
       shell: dconf update
-      become: true
-    - name: Update initramfs
-      shell: update-initramfs -u
-      become: true
-  tasks:
-    - name: Install base system packages
-      package:
-        name: '{{item}}'
-        state: latest
-      loop:
-        - NetworkManager-openvpn
-        - NetworkManager-openvpn-gnome
-        - arc-theme
-        - curl
-        - dnsutils
-        - file-roller
-        - firewall-config
-        - git
-        - git-extras
-        - gnome-extensions-app
-        - gnome-shell-extension-caffeine
-        - gnome-shell-extension-openweather
-        - gnome-tweaks
-        - gnupg
-        - hexedit
-        - htop
-        - openvpn
-        - p7zip
-        - papirus-icon-theme
-        - python3
-        - python3-pip
-        - traceroute
-        - unzip
-        - wget
-        - whois
-        - zip
-        - zsh
-      tags: [ 'base_packages', 'packages' ]
       become: yes
-
+    - name: Update initramfs
+      shell: dracut --regenerate-all --force
+      become: yes
+  tasks:
     - name: Add RPM keys (.rpm repos)
       rpm_key:
         state: present
@@ -64,27 +28,34 @@
       loop:
         - 'https://rpmfusion.org/keys?action=AttachFile&do=get&target=RPM-GPG-KEY-rpmfusion-free-fedora-2020'
         - 'https://rpmfusion.org/keys?action=AttachFile&do=get&target=RPM-GPG-KEY-rpmfusion-nonfree-fedora-2020'
-        - 'https://rpms.remirepo.net/RPM-GPG-KEY-remi2021'
+        - 'https://repo.protonvpn.com/fedora-38-stable/public_key.asc'
       become: yes
       tags: [ 'repositories' ]
 
-    - name: Install repositories (.rpm)
+    - name: Add repositories (.rpm)
       dnf:
         name: '{{ item }}'
         state: present
       loop:
         - 'https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ansible_distribution_major_version}}.noarch.rpm'
         - 'https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ansible_distribution_major_version}}.noarch.rpm'
-        - 'https://rpms.remirepo.net/fedora/remi-release-{{ansible_distribution_major_version}}.rpm'
+        - 'https://repo.protonvpn.com/fedora-38-stable/protonvpn-stable-release/protonvpn-stable-release-1.0.1-2.noarch.rpm'
+      become: yes
+      tags: [ 'repositories' ]
+
+    - name: Add repositories (.repo)
+      get_url:
+        url: '{{item.url}}'
+        dest: '/etc/yum.repos.d/{{item.name}}.repo'
+      loop:
+        - { name: docker-ce, url: https://download.docker.com/linux/fedora/docker-ce.repo }
       become: yes
       tags: [ 'repositories' ]
 
     - name: Enable repositories
       shell: 'dnf config-manager --set-enabled {{item}}'
-      register: dnf_set_enabled
       loop:
-        - remi
-        - remi-php81
+        - docker-ce-stable
         - rpmfusion-free
         - rpmfusion-free-updates
         - rpmfusion-nonfree
@@ -98,17 +69,37 @@
         name: '{{item}}'
         state: latest
       loop:
-        - VirtualBox
-        - chromium-freeworld
+        - NetworkManager-openvpn
+        - NetworkManager-openvpn-gnome
         - clang
         - cloud-utils
         - cmake
+        - containerd.io
         - cups
+        - curl
+        - dnsutils
+        - docker-buildx-plugin
+        - docker-ce
+        - docker-ce-cli
+        - docker-compose-plugin
         - ffmpeg
+        - file-roller
         - filezilla
+        - firefox
         - fzf
-        - geary
         - gimp
+        - git
+        - git-extras
+        - gitg
+        - gnome-boxes
+        - gnome-connections
+        - gnome-extensions-app
+        - gnome-shell-extension-apps-menu
+        - gnome-shell-extension-caffeine
+        - gnome-shell-extension-user-theme
+        - gnome-tweaks
+        - gnupg
+        - htop
         - inkscape
         - libreoffice-base
         - libreoffice-calc
@@ -117,42 +108,57 @@
         - make
         - meld
         - micro
-        - moby-engine
         - ncdu
         - nmap
-        - nodejs
+        - openvpn
+        - p7zip
+        - papirus-icon-theme
+        - podman
+        - polari
+        - protonvpn
+        - python3
+        - python3-pip
         - rubygems
-        - sshpass
+        - seahorse
         - syncthing
-        - terminator
         - tmux
-        - transmission
-        - uget
-        - valgrind
+        - traceroute
+        - unzip
         - virt-manager
         - vlc
-        - yarnpkg
+        - wget
+        - whois
+        - zip
+        - zsh
       become: yes
       tags: [ 'packages' ]
 
-    - name: Remove not-needed packages
-      package:
+    - name: Install tmuxinator
+      gem:
+        name: tmuxinator
+        state: latest
+        user_install: false
+      become: yes
+      tags: [ 'packages' , 'gem' ]
+
+    - name: Ensure pip3 packages
+      pip:
         name: '{{item}}'
-        state: absent
+        executable: pip3
+        state: latest
       loop:
-        - fedora-chromium-config
-      tags: [ 'packages' ]
-      become: yes
+        - ansible # Yo dawg i herd you like Ansible so we put a Ansible in yo Ansible so you can automate while u automate
+        - awscli
 
-    - name: Add the flathub repository
+    - name: Add the Flathub to flatpak remotes
       flatpak_remote:
         name: flathub
-        state: present
         flatpakrepo_url: https://dl.flathub.org/repo/flathub.flatpakrepo
+        state: present
       become: yes
       tags: [ 'packages', 'flatpak' ]
 
-    - name: Install Flatpak packages
+    - name: Install flatpak packages
       flatpak:
         name:
           - com.bitwarden.desktop
@@ -160,65 +166,63 @@
           - com.skype.Client
           - com.slack.Slack
           - com.spotify.Client
-          - com.usedbottles.bottles
           - com.valvesoftware.Steam
-          - io.atom.Atom
           - org.signal.Signal
           - org.telegram.desktop
-          - rest.insomnia.Insomnia
           - us.zoom.Zoom
       become: yes
-      tags: [ 'packages', 'flatpak' ]
+      tags: [ 'packages', 'flatpak' , 'flatpak_packages' ]
 
-    - name: Ensure system files
-      copy:
-        src: '{{item.src}}'
-        dest: '{{item.dest}}'
-        mode: '0644'
-        owner: root
-        group: root
-      loop:
-        - { src: menu-icon.svg, dest: /etc/menu-icon.svg } # Used by Arc Menu GNOME extension.
-        - { src: wallpaper.jpg, dest: /etc/wallpaper.jpg } # System default wallpaper
-      become: yes
+    - name: Stat /opt/jetbrains-toolbox/
+      stat:
+        path: /opt/jetbrains-toolbox/
+      register: opt_jetbrains_toolbox
+      tags: [ 'packages', 'toolbox' ]
 
-    - name: Configure DCONF
+    - name: Create /opt/jetbrains-toolbox/ if not present
       file:
-        path: /etc/dconf/profile
+        path: /opt/jetbrains-toolbox/
         state: directory
-        mode: '0755'
         owner: root
-        group: root
+        mode: '0775'
+      when: not opt_jetbrains_toolbox.stat.exists
+      become: yes
+      tags: [ 'packages', 'toolbox' ]
+
+    - name: Download JB toolbox
+      unarchive:
+        src: https://download.jetbrains.com/product?code=TB&latest&distribution=linux
+        remote_src: true
+        dest: /opt/jetbrains-toolbox/
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+        mode: '0755'
+      when: not opt_jetbrains_toolbox.stat.exists
+      become: yes
+      tags: [ 'packages', 'toolbox' ]
+
+    - name: Enable and start Docker-CE service
+      service:
+        name: docker
+        state: started
+        enabled: yes
       become: yes
 
-    - name: Copy dconf user profile config
+    - name: Copy system wallpaper
       copy:
-        src: dconf_profile_user
-        dest: /etc/dconf/profile/user
+        src: wallpaper.jpg
+        dest: /usr/share/backgrounds/wallpaper.jpg
         mode: '0644'
         owner: root
         group: root
       become: yes
+      tags: [ 'wallpaper' ]
 
-    - name: Create /etc/dconf/db/local.d
-      file:
-        path: /etc/dconf/db/local.d
-        state: directory
-        mode: '0755'
-        owner: root
-        group: root
-      become: yes
-
-    - name: Update dconf settings
+    - name: Install fonts
       copy:
-        src: dconf_settings.ini
-        dest: /etc/dconf/db/local.d/00-global
-        mode: '0644'
-        owner: root
-        group: root
-      notify: [ Update dconf ]
+        src: fonts/
+        dest: /usr/local/share/fonts
       become: yes
-      tags: [ 'tmp' ]
 
     - name: Configure boot screen
       copy:
@@ -229,6 +233,8 @@
         group: root
       notify: [ Update initramfs ]
       become: yes
+
+    - meta: flush_handlers
 
     - name: Install oh-my-zsh for self
       script:
@@ -244,19 +250,13 @@
       changed_when: false # ignore
       become: yes
 
-    - name: Install fonts
-      copy:
-        src: fonts/
-        dest: /usr/local/share/fonts
-      become: yes
-
     - name: Ensure group "docker" exists
       group:
         name: docker
         state: present
       become: yes
 
-    - name: Update own user profile
+    - name: Configure '{{host_username}}' user settings (zsh, docker group)
       user:
         name: '{{host_username}}'
         shell: /bin/zsh
@@ -273,7 +273,7 @@
         shell: /bin/zsh
       become: yes
 
-    - name: Create ~/.ssh/
+    - name: Ensure '/home/{{host_username}}/.ssh/' has correct permissions
       file:
         path: '/home/{{host_username}}/.ssh'
         state: directory
@@ -281,6 +281,24 @@
         owner: '{{host_username}}'
         group: '{{host_username}}'
       become: yes
+
+    - name: Locate all files in '/home/{{host_username}}/.ssh/'
+      find:
+        paths: '/home/{{host_username}}/.ssh'
+        file_type: file
+        patterns: "*"
+      register: home_dot_ssh_files
+
+    - name: Ensure all files in '/home/{{host_username}}/.ssh/' have correct permissions
+      file:
+        path: '{{ item.path }}'
+        state: file
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+        mode: '0600'
+      loop: '{{ home_dot_ssh_files.files }}'
+      loop_control:
+        label: '{{item.path}}'
 
     - name: Ensure personal dot files
       copy:
@@ -296,8 +314,6 @@
         - { src: dots/wgetrc, dest: '/home/{{host_username}}/.wgetrc' }
         - { src: dots/gitignore, dest: '/home/{{host_username}}/.gitignore' }
         - { src: dots/curlrc, dest: '/home/{{host_username}}/.curlrc' }
-        - { src: dots/.atom/config.cson, dest: '/home/{{host_username}}/.var/app/io.atom.Atom/data/config.cson' }
-        - { src: dots/.atom/styles.less, dest: '/home/{{host_username}}/.var/app/io.atom.Atom/data/styles.less' }
       tags: [ 'dots' ]
 
     - name: Ensure root dot files
@@ -366,84 +382,82 @@
         - { dir: '/home/{{host_username}}/Documents/Personal/Archive', icon: '/usr/share/icons/Papirus/64x64/places/folder-teal-tar.svg' }
       tags: [ 'dir-structure' ]
 
-    # Install python extra packages and ensure they are up to date.
-    - name: Ensure pip3 packages
-      pip:
-        name: '{{item}}'
-        executable: pip3
-        state: latest
-      loop:
-        - ansible # Yo dawg i herd you like Ansible so we put a Ansible in yo Ansible so you can automate while u automate
-        - awscli
-        - cloudsmith-cli
-        - django
-        - docker-compose
-        - pipenv
-      become: yes
-
-    - name: Remove global, default PHP, if installed
-      package:
-        name: '{{item}}'
-        state: absent
-      loop:
-        - php-cli
-        - php-fpm
-        - php-common
-      tags: [ 'php', 'packages' ]
-      become: yes
-
-    - name: Install PHP packages
-      package:
-        name: '{{item}}'
-        state: latest
-      loop:
-        # PHP8.1
-        - php81-php-cli
-        - php81-php-curl
-        - php81-php-devel
-        - php81-php-gd
-        - php81-php-gmp
-        - php81-php-intl
-        - php81-php-intl
-        - php81-php-ldap
-        - php81-php-mbstring
-        - php81-php-mysqlnd
-        - php81-php-pdo
-        - php81-php-xml
-      tags: [ 'php', 'packages' ]
-      become: yes
-
-    - name: Link PHP binary to point to usable version
-      file:
-        src: /usr/bin/php81
-        dest: /usr/bin/php
+    - name: Download and install GTK3 theme
+      unarchive:
+        src: https://github.com/EliverLara/Nordic/archive/refs/heads/darker-standard-buttons.zip
+        remote_src: yes
+        dest: /usr/share/themes/
         owner: root
         group: root
+        mode: '0755'
+        creates: /usr/share/themes/Nordic-darker-standard-buttons
+      become: yes
+      tags: [ 'theme' ]
+
+    - name: Symlink GTK 3.0 theme from Nord theme to user config
+      file:
+        src: /usr/share/themes/Nordic-darker-standard-buttons/gtk-3.0
+        dest: '/home/{{host_username}}/.config/gtk-3.0'
+        force: yes
         state: link
-      become: yes
-      tags: [ 'php' ]
+      tags: [ 'theme' ]
 
-    - name: Install composer globally
-      script:
-        cmd: 'scripts/composer-setup.sh'
-        chdir: /tmp
-        creates: /usr/local/bin/composer
-      changed_when: false # ignore
-      tags: [ 'php' ]
-      become: yes
+    - name: Symlink GTK 4.0 theme from Nord theme to user config
+      file:
+        src: /usr/share/themes/Nordic-darker-standard-buttons/gtk-4.0
+        dest: '/home/{{host_username}}/.config/gtk-4.0'
+        force: yes
+        state: link
+      tags: [ 'theme' ]
 
-    - name: Install Symfony CLI globally
-      script:
-        cmd: 'scripts/symfony-setup.sh --install-dir=/usr/local/bin/'
-        chdir: /tmp
-        creates: /usr/local/bin/symfony
-      changed_when: false # ignore
-      tags: [ 'php' ]
+    - name: Ensure dconf profile directory exists
+      file:
+        path: /etc/dconf/profile
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
       become: yes
+      tags: [ 'dconf' ]
 
-    - name: Install pyenv for own user
-      script:
-        cmd: 'scripts/pyenv-setup.sh'
-        chdir: '/home/{{host_username}}'
-        creates: '/home/{{host_username}}/.pyenv'
-      changed_when: false # ignore
+    - name: Copy dconf user profile configuration
+      copy:
+        src: dconf_profile_user
+        dest: /etc/dconf/profile/user
+        mode: '0644'
+        owner: root
+        group: root
+      become: yes
+      tags: [ 'dconf' ]
+
+    - name: Ensure dconf local configuration defaults exists
+      file:
+        path: /etc/dconf/db/local.d
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      become: yes
+      tags: [ 'dconf' ]
+
+    - name: Configure dconf global defaults
+      copy:
+        src: dconf_settings.ini
+        dest: /etc/dconf/db/local.d/00-global
+        mode: '0644'
+        owner: root
+        group: root
+      notify: [ Update dconf ]
+      become: yes
+      tags: [ 'dconf' ]
+
+    - name: Configure GDM dconf settings defaults
+      copy:
+        src: dconf_gdm.ini
+        dest: /etc/dconf/db/gdm.d/00-global
+        mode: '0644'
+        owner: root
+        group: root
+      notify: [ Update dconf ]
+      become: yes
+      tags: [ 'dconf' ]
