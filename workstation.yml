@@ -170,6 +170,7 @@
           - com.slack.Slack
           - com.spotify.Client
           - com.valvesoftware.Steam
+          - org.gnome.World.PikaBackup
           - org.signal.Signal
           - org.telegram.desktop
           - us.zoom.Zoom
