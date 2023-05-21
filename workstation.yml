@@ -48,7 +48,8 @@
         url: '{{item.url}}'
         dest: '/etc/yum.repos.d/{{item.name}}.repo'
       loop:
-        - { name: docker-ce, url: https://download.docker.com/linux/fedora/docker-ce.repo }
+        - { name: docker-ce, url: 'https://download.docker.com/linux/fedora/docker-ce.repo' }
+        - { name: hashicorp, url: 'https://rpm.releases.hashicorp.com/fedora/hashicorp.repo' }
       become: yes
       tags: [ 'repositories' ]
 
@@ -96,6 +97,7 @@
         - gnome-extensions-app
         - gnome-shell-extension-apps-menu
         - gnome-shell-extension-caffeine
+        - gnome-shell-extension-dash-to-dock
         - gnome-shell-extension-user-theme
         - gnome-tweaks
         - gnupg
@@ -121,6 +123,7 @@
         - rubygems
         - seahorse
         - syncthing
+        - terraform
         - tmux
         - traceroute
         - unzip

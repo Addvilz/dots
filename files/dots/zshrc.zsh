@@ -44,10 +44,6 @@ function pod {
     IMAGE="${IMAGE}:latest"
   fi
 
-  if [[ ! $IMAGE = *"/"* ]]; then
-    IMAGE="docker.io/library/${IMAGE}"
-  fi
-
   WORKDIR=$(pwd)
 
   if [[ $# -eq 0 ]]; then
