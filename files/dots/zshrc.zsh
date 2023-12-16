@@ -79,3 +79,5 @@ function podd {
 if [[ $UID == 0 || $EUID == 0 ]]; then
   export PS1="%{$fg[cyan]%}[%~% ]%{$FG[202]%}[root]%(?.%{$fg[green]%}.%{$fg[red]%})%B$%b "
 fi
+
+zstyle ':completion::complete:make::' tag-order targets variables
