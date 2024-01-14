@@ -6,6 +6,7 @@
   vars:
     # Update these variables as needed to match your own settings.
     host_username: 'matiss'
+    allow_ssh_users: 'matiss'
     git_email: 'matiss@hub256.com'
     git_name: 'Matīss Treinis'
     git_signing_key: '3B44AE79519B1C6552941B109123B913EBF53D43'
@@ -19,6 +20,16 @@
       become: yes
     - name: Update initramfs
       shell: dracut --regenerate-all --force
+      become: yes
+    - name: Restart sshd
+      service:
+        name: sshd
+        state: restarted
+      become: yes
+    - name: Reload firewalld
+      service:
+        name: firewalld
+        state: reloaded
       become: yes
   tasks:
     - name: Add RPM keys (.rpm repos)
@@ -83,10 +94,11 @@
         - docker-ce
         - docker-ce-cli
         - docker-compose-plugin
-        - ffmpeg
         - file-roller
         - filezilla
         - firefox
+        - firewall-config
+        - firewalld
         - fzf
         - gimp
         - git
@@ -136,6 +148,14 @@
       become: yes
       tags: [ 'packages' ]
 
+    - name: Install ffmpeg with allow erasing
+      dnf:
+        name: ffmpeg
+        state: latest
+        allowerasing: yes
+      become: yes
+      tags: [ 'packages' ]
+
     - name: Install tmuxinator
       gem:
         name: tmuxinator
@@ -172,6 +192,7 @@
           - com.valvesoftware.Steam
           - org.gnome.World.PikaBackup
           - org.signal.Signal
+          - org.standardnotes.standardnotes
           - org.telegram.desktop
           - us.zoom.Zoom
       become: yes
@@ -465,3 +486,78 @@
       notify: [ Update dconf ]
       become: yes
       tags: [ 'dconf' ]
+
+    - name: Ensure local sshd config exists with the right perms
+      file:
+        path: /etc/ssh/sshd_config.d/00-local.conf
+        state: touch
+        mode: '0700'
+        owner: root
+        group: root
+        modification_time: preserve
+        access_time: preserve
+      become: yes
+      tags: [ 'sshd' ]
+
+    - name: Set local sshd config
+      lineinfile:
+        path: /etc/ssh/sshd_config.d/00-local.conf
+        regexp: '^{{item.key}}'
+        line: '{{item.key}} {{item.value}}'
+        state: present
+      become: yes
+      loop:
+        - { key: 'PasswordAuthentication', value: 'no' }
+        - { key: 'PermitEmptyPasswords', value: 'no' }
+        - { key: 'GSSAPIAuthentication', value: 'no' }
+        - { key: 'ChallengeResponseAuthentication', value: 'no' }
+        - { key: 'KerberosAuthentication', value: 'no' }
+        - { key: 'PermitRootLogin', value: 'no' }
+        - { key: 'X11Forwarding', value: 'no' }
+        - { key: 'AllowTcpForwarding', value: 'no' }
+        - { key: 'ClientAliveCountMax', value: '3' }
+        - { key: 'ClientAliveInterval', value: '300' }
+        - { key: 'LoginGraceTime', value: '15' }
+        - { key: 'Ciphers', value: 'aes256-gcm@openssh.com,chacha20-poly1305@openssh.com,aes256-ctr,aes128-gcm@openssh.com,aes128-ctr' }
+        - { key: 'MACs', value: 'hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,hmac-sha2-256,hmac-sha2-512' }
+        - { key: 'KexAlgorithms', value: 'curve25519-sha256@libssh.org' }
+        - { key: 'AllowUsers', value: '{{allow_ssh_users}}' }
+      notify: [ Restart sshd ]
+      tags: [ 'sshd' ]
+
+    - name: Ensure firewalld is running
+      service:
+        name: firewalld
+        state: started
+        enabled: yes
+      become: yes
+      tags: [ 'firewall' ]
+
+    - name: Create custom zone to use by default
+      firewalld:
+        zone: GoAway
+        state: present
+        permanent: true
+      become: yes
+      notify: [ Reload firewalld ]
+      tags: [ 'firewall' ]
+
+    - name: Allow basic services in firewall
+      firewalld:
+        service: '{{item}}'
+        permanent: yes
+        state: enabled
+        immediate: yes
+        zone: GoAway
+      loop:
+        - dhcpv6-client
+        - mdns
+        - samba-client
+        - ssh
+      become: yes
+      tags: [ 'firewall' ]
+
+    - name: Set GoAway as default policy
+      command: firewall-cmd --set-default-zone=GoAway
+      become: yes
+      tags: [ 'firewall' ]
