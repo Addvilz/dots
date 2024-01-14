@@ -487,6 +487,8 @@
       become: yes
       tags: [ 'dconf' ]
 
+    - meta: flush_handlers
+
     - name: Ensure local sshd config exists with the right perms
       file:
         path: /etc/ssh/sshd_config.d/00-local.conf
@@ -532,6 +534,8 @@
         enabled: yes
       become: yes
       tags: [ 'firewall' ]
+
+    - meta: flush_handlers
 
     - name: Create custom zone to use by default
       firewalld:
