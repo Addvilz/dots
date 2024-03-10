@@ -407,34 +407,6 @@
         - { dir: '/home/{{host_username}}/Documents/Personal/Archive', icon: '/usr/share/icons/Papirus/64x64/places/folder-teal-tar.svg' }
       tags: [ 'dir-structure' ]
 
-    - name: Download and install GTK3 theme
-      unarchive:
-        src: https://github.com/EliverLara/Nordic/archive/refs/heads/darker-standard-buttons.zip
-        remote_src: yes
-        dest: /usr/share/themes/
-        owner: root
-        group: root
-        mode: '0755'
-        creates: /usr/share/themes/Nordic-darker-standard-buttons
-      become: yes
-      tags: [ 'theme' ]
-
-    - name: Symlink GTK 3.0 theme from Nord theme to user config
-      file:
-        src: /usr/share/themes/Nordic-darker-standard-buttons/gtk-3.0
-        dest: '/home/{{host_username}}/.config/gtk-3.0'
-        force: yes
-        state: link
-      tags: [ 'theme' ]
-
-    - name: Symlink GTK 4.0 theme from Nord theme to user config
-      file:
-        src: /usr/share/themes/Nordic-darker-standard-buttons/gtk-4.0
-        dest: '/home/{{host_username}}/.config/gtk-4.0'
-        force: yes
-        state: link
-      tags: [ 'theme' ]
-
     - name: Ensure dconf profile directory exists
       file:
         path: /etc/dconf/profile

@@ -43,7 +43,6 @@ that have been used here primarily because they suit my requirements.
 ## Components
 
 - GNOME desktop
-- [Nord Theme](https://github.com/EliverLara/Nordic)
 - Papirus Dark icons
 - [IBM Plex](https://www.ibm.com/plex/) and [JetBrains Mono](https://www.jetbrains.com/lp/mono/) fonts
 - ... software, tools, things.
