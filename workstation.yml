@@ -39,7 +39,7 @@
       loop:
         - 'https://rpmfusion.org/keys?action=AttachFile&do=get&target=RPM-GPG-KEY-rpmfusion-free-fedora-2020'
         - 'https://rpmfusion.org/keys?action=AttachFile&do=get&target=RPM-GPG-KEY-rpmfusion-nonfree-fedora-2020'
-        - 'https://repo.protonvpn.com/fedora-38-stable/public_key.asc'
+        - 'https://repo.protonvpn.com/fedora-{{ansible_distribution_major_version}}-stable/public_key.asc'
       become: yes
       tags: [ 'repositories' ]
 
@@ -50,7 +50,7 @@
       loop:
         - 'https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ansible_distribution_major_version}}.noarch.rpm'
         - 'https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ansible_distribution_major_version}}.noarch.rpm'
-        - 'https://repo.protonvpn.com/fedora-38-stable/protonvpn-stable-release/protonvpn-stable-release-1.0.1-2.noarch.rpm'
+        - 'https://repo.protonvpn.com/fedora-{{ansible_distribution_major_version}}-stable/protonvpn-stable-release/protonvpn-stable-release-1.0.1-2.noarch.rpm'
       become: yes
       tags: [ 'repositories' ]
 
@@ -72,6 +72,7 @@
         - rpmfusion-free-updates
         - rpmfusion-nonfree
         - rpmfusion-nonfree-updates
+        - protonvpn-fedora-stable
       become: yes
       tags: [ 'repositories' ]
       changed_when: false
@@ -129,7 +130,7 @@
         - papirus-icon-theme
         - podman
         - polari
-        - protonvpn
+        - protonvpn-stable-release
         - python3
         - python3-pip
         - rubygems
@@ -517,6 +518,8 @@
       become: yes
       notify: [ Reload firewalld ]
       tags: [ 'firewall' ]
+
+    - meta: flush_handlers
 
     - name: Allow basic services in firewall
       firewalld:
