@@ -1,7 +1,6 @@
 ---
-- name: Configure Fedora workstation
-  hosts: workstation
-  # Edit as needed if executing remotely
+- name: Configure Fedora workstation (headless)
+  hosts: workstation-headless
   remote_user: matiss
   vars:
     # Update these variables as needed to match your own settings.
@@ -11,16 +10,10 @@
     git_name: 'Matīss Treinis'
     git_signing_key: '3B44AE79519B1C6552941B109123B913EBF53D43'
     git_commit_gpgsign: 'true'
-    git_diff_tool: 'meld'
+    git_diff_tool: 'vimdiff'
     git_push_default: 'current'
     authorized_keys: '{{ lookup("file", "files/id_rsa.pub") }}'
   handlers:
-    - name: Update dconf
-      shell: dconf update
-      become: yes
-    - name: Update initramfs
-      shell: dracut --regenerate-all --force
-      become: yes
     - name: Restart sshd
       service:
         name: sshd
@@ -82,65 +75,36 @@
         name: '{{item}}'
         state: latest
       loop:
-        - NetworkManager-openvpn
-        - NetworkManager-openvpn-gnome
         - clang
         - cloud-utils
         - cmake
+        - cockpit
+        - cockpit-machines
         - containerd.io
-        - cups
         - curl
         - dnsutils
         - docker-buildx-plugin
         - docker-ce
         - docker-ce-cli
         - docker-compose-plugin
-        - file-roller
-        - filezilla
-        - firefox
-        - firewall-config
         - firewalld
         - fzf
-        - gimp
         - git
         - git-extras
-        - gitg
-        - gnome-boxes
-        - gnome-connections
-        - gnome-extensions-app
-        - gnome-shell-extension-apps-menu
-        - gnome-shell-extension-caffeine
-        - gnome-shell-extension-dash-to-dock
-        - gnome-shell-extension-user-theme
-        - gnome-tweaks
         - gnupg
         - htop
-        - inkscape
-        - libreoffice-base
-        - libreoffice-calc
-        - libreoffice-impress
-        - libreoffice-writer
         - make
-        - meld
         - micro
         - ncdu
         - nmap
         - openvpn
-        - p7zip
-        - papirus-icon-theme
-        - podman
-        - polari
-        - protonvpn-stable-release
         - python3
         - python3-pip
         - rubygems
-        - seahorse
         - terraform
         - tmux
         - traceroute
         - unzip
-        - virt-manager
-        - vlc
         - wget
         - whois
         - zip
@@ -173,90 +137,11 @@
         - ansible # Yo dawg i herd you like Ansible so we put a Ansible in yo Ansible so you can automate while u automate
         - awscli
 
-    - name: Add the Flathub to flatpak remotes
-      flatpak_remote:
-        name: flathub
-        flatpakrepo_url: https://dl.flathub.org/repo/flathub.flatpakrepo
-        state: present
-      become: yes
-      tags: [ 'packages', 'flatpak' ]
-
-    - name: Install flatpak packages
-      flatpak:
-        name:
-          - com.bitwarden.desktop
-          - com.mattermost.Desktop
-          - com.skype.Client
-          - com.slack.Slack
-          - com.spotify.Client
-          - com.valvesoftware.Steam
-          - org.gnome.World.PikaBackup
-          - org.signal.Signal
-          - org.standardnotes.standardnotes
-          - org.telegram.desktop
-          - us.zoom.Zoom
-      become: yes
-      tags: [ 'packages', 'flatpak' , 'flatpak_packages' ]
-
-    - name: Stat /opt/jetbrains-toolbox/
-      stat:
-        path: /opt/jetbrains-toolbox/
-      register: opt_jetbrains_toolbox
-      tags: [ 'packages', 'toolbox' ]
-
-    - name: Create /opt/jetbrains-toolbox/ if not present
-      file:
-        path: /opt/jetbrains-toolbox/
-        state: directory
-        owner: root
-        mode: '0775'
-      when: not opt_jetbrains_toolbox.stat.exists
-      become: yes
-      tags: [ 'packages', 'toolbox' ]
-
-    - name: Download JB toolbox
-      unarchive:
-        src: https://download.jetbrains.com/product?code=TB&latest&distribution=linux
-        remote_src: true
-        dest: /opt/jetbrains-toolbox/
-        owner: '{{host_username}}'
-        group: '{{host_username}}'
-        mode: '0755'
-      when: not opt_jetbrains_toolbox.stat.exists
-      become: yes
-      tags: [ 'packages', 'toolbox' ]
-
     - name: Enable and start Docker-CE service
       service:
         name: docker
         state: started
         enabled: yes
-      become: yes
-
-    - name: Copy system wallpaper
-      copy:
-        src: wallpaper.jpg
-        dest: /usr/share/backgrounds/wallpaper.jpg
-        mode: '0644'
-        owner: root
-        group: root
-      become: yes
-      tags: [ 'wallpaper' ]
-
-    - name: Install fonts
-      copy:
-        src: fonts/
-        dest: /usr/local/share/fonts
-      become: yes
-
-    - name: Configure boot screen
-      copy:
-        src: plymouthd.conf
-        dest: /etc/plymouth/plymouthd.conf
-        mode: '0644'
-        owner: root
-        group: root
-      notify: [ Update initramfs ]
       become: yes
 
     - meta: flush_handlers
@@ -267,13 +152,6 @@
         chdir: '/home/{{host_username}}'
         creates: '/home/{{host_username}}/.oh-my-zsh'
       changed_when: false # ignore
-
-    - name: Install oh-my-zsh for root
-      script:
-        cmd: 'scripts/oh-my-zsh-setup.sh --unattended --keep-zshrc'
-        creates: '/root/.oh-my-zsh'
-      changed_when: false # ignore
-      become: yes
 
     - name: Ensure group "docker" exists
       group:
@@ -290,12 +168,6 @@
         create_home: yes
         password: '*' # Initial password is none, account locked
         update_password: on_create # Do not reset password from ansible
-      become: yes
-
-    - name: Set root shell to zsh
-      user:
-        name: root
-        shell: /bin/zsh
       become: yes
 
     - name: Ensure '/home/{{host_username}}/.ssh/' has correct permissions
@@ -341,21 +213,6 @@
         - { src: dots/curlrc, dest: '/home/{{host_username}}/.curlrc' }
       tags: [ 'dots' ]
 
-    - name: Ensure root dot files
-      copy:
-        src: '{{item.src}}'
-        dest: '{{item.dest}}'
-        mode: '0600'
-        owner: root
-        group: root
-      loop:
-        - { src: dots/zshrc.zsh, dest: '/root/.zshrc' }
-        - { src: dots/editorconfig, dest: '/root/.editorconfig' }
-        - { src: dots/wgetrc, dest: '/root/.wgetrc' }
-        - { src: dots/curlrc, dest: '/root/.curlrc' }
-      become: yes
-      tags: [ 'dots' ]
-
     - name: Ensure personal files (from templates)
       template:
         src: '{{item.src}}'
@@ -387,77 +244,6 @@
         - '/home/{{host_username}}/Documents/Personal/Archive'
       become: yes
       tags: [ 'dir-structure' ]
-
-    # Configure icons in Nautilus for some directories.
-    - name: Set home folder icons
-      shell: 'gio set -t string {{item.dir}} metadata::custom-icon file://{{item.icon}}'
-      changed_when: false # Really not that important...
-      loop:
-        - { dir: '/home/{{host_username}}/dots', icon: '/usr/share/icons/Papirus/64x64/places/folder-orange-sync.svg' }
-        - { dir: '/home/{{host_username}}/Projects', icon: '/usr/share/icons/Papirus/64x64/places/folder-magenta-projects.svg' }
-        - { dir: '/home/{{host_username}}/Projects/Work', icon: '/usr/share/icons/Papirus/64x64/places/folder-red-projects.svg' }
-        - { dir: '/home/{{host_username}}/Projects/Work/Archive', icon: '/usr/share/icons/Papirus/64x64/places/folder-red-tar.svg' }
-        - { dir: '/home/{{host_username}}/Projects/Work/Scratch', icon: '/usr/share/icons/Papirus/64x64/places/folder-red-java.svg' }
-        - { dir: '/home/{{host_username}}/Projects/Personal', icon: '/usr/share/icons/Papirus/64x64/places/folder-teal-projects.svg' }
-        - { dir: '/home/{{host_username}}/Projects/Personal/Archive', icon: '/usr/share/icons/Papirus/64x64/places/folder-teal-tar.svg' }
-        - { dir: '/home/{{host_username}}/Projects/Personal/Scratch', icon: '/usr/share/icons/Papirus/64x64/places/folder-teal-java.svg' }
-        - { dir: '/home/{{host_username}}/Documents/Work', icon: '/usr/share/icons/Papirus/64x64/places/folder-red-documents.svg' }
-        - { dir: '/home/{{host_username}}/Documents/Work/Archive', icon: '/usr/share/icons/Papirus/64x64/places/folder-red-tar.svg' }
-        - { dir: '/home/{{host_username}}/Documents/Personal', icon: '/usr/share/icons/Papirus/64x64/places/folder-teal-documents.svg' }
-        - { dir: '/home/{{host_username}}/Documents/Personal/Archive', icon: '/usr/share/icons/Papirus/64x64/places/folder-teal-tar.svg' }
-      tags: [ 'dir-structure' ]
-
-    - name: Ensure dconf profile directory exists
-      file:
-        path: /etc/dconf/profile
-        state: directory
-        mode: '0755'
-        owner: root
-        group: root
-      become: yes
-      tags: [ 'dconf' ]
-
-    - name: Copy dconf user profile configuration
-      copy:
-        src: dconf_profile_user
-        dest: /etc/dconf/profile/user
-        mode: '0644'
-        owner: root
-        group: root
-      become: yes
-      tags: [ 'dconf' ]
-
-    - name: Ensure dconf local configuration defaults exists
-      file:
-        path: /etc/dconf/db/local.d
-        state: directory
-        mode: '0755'
-        owner: root
-        group: root
-      become: yes
-      tags: [ 'dconf' ]
-
-    - name: Configure dconf global defaults
-      copy:
-        src: dconf_settings.ini
-        dest: /etc/dconf/db/local.d/00-global
-        mode: '0644'
-        owner: root
-        group: root
-      notify: [ Update dconf ]
-      become: yes
-      tags: [ 'dconf' ]
-
-    - name: Configure GDM dconf settings defaults
-      copy:
-        src: dconf_gdm.ini
-        dest: /etc/dconf/db/gdm.d/00-global
-        mode: '0644'
-        owner: root
-        group: root
-      notify: [ Update dconf ]
-      become: yes
-      tags: [ 'dconf' ]
 
     - meta: flush_handlers
 
@@ -507,8 +293,6 @@
       become: yes
       tags: [ 'firewall' ]
 
-    - meta: flush_handlers
-
     - name: Create custom zone to use by default
       firewalld:
         zone: GoAway
@@ -532,6 +316,7 @@
         - mdns
         - samba-client
         - ssh
+        - cockpit
       become: yes
       tags: [ 'firewall' ]
 

@@ -1,2 +1,5 @@
 [workstation]
 localhost ansible_host=localhost ansible_connection=local ansible_python_interpreter=/usr/bin/python3
+
+[workstation-headless]
+localhost ansible_host=localhost ansible_connection=local ansible_python_interpreter=/usr/bin/python3
