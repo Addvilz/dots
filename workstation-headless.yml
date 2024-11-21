@@ -92,7 +92,9 @@
         - git
         - git-extras
         - gnupg
+        - guestfs-tools
         - htop
+        - libvirt
         - make
         - micro
         - ncdu
@@ -100,11 +102,14 @@
         - openvpn
         - python3
         - python3-pip
+        - qemu-img
+        - qemu-kvm
         - rubygems
         - terraform
         - tmux
         - traceroute
         - unzip
+        - virt-install
         - wget
         - whois
         - zip
@@ -140,6 +145,13 @@
     - name: Enable and start Docker-CE service
       service:
         name: docker
+        state: started
+        enabled: yes
+      become: yes
+
+    - name: Enable and start libvirtd
+      service:
+        name: libvirtd
         state: started
         enabled: yes
       become: yes
