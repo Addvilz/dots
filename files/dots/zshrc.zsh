@@ -83,3 +83,5 @@ fi
 export PS1="%{%F{39}%}[%M]%F{default}$PS1"
 
 zstyle ':completion::complete:make::' tag-order targets variables
+
+export GPG_TTY=$TTY
