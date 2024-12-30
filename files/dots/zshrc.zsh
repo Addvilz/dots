@@ -27,6 +27,10 @@ alias l='ls -lAFh --color=always --group-directories-first'
 alias mux='tmuxinator'
 
 # Functions
+function rok {
+  ssh -A rok.local -t "tmux new-session -A -s remote"
+}
+
 function cd {
   builtin cd "$@" && l
 }
