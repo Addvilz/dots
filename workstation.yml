@@ -50,7 +50,7 @@
       loop:
         - 'https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ansible_distribution_major_version}}.noarch.rpm'
         - 'https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ansible_distribution_major_version}}.noarch.rpm'
-        - 'https://repo.protonvpn.com/fedora-{{ansible_distribution_major_version}}-stable/protonvpn-stable-release/protonvpn-stable-release-1.0.1-2.noarch.rpm'
+        - 'https://repo.protonvpn.com/fedora-{{ansible_distribution_major_version}}-stable/protonvpn-stable-release/protonvpn-stable-release-1.0.2-1.noarch.rpm'
       become: yes
       tags: [ 'repositories' ]
 
@@ -65,7 +65,7 @@
       tags: [ 'repositories' ]
 
     - name: Enable repositories
-      shell: 'dnf config-manager --set-enabled {{item}}'
+      shell: 'dnf5 config-manager setopt {{item}}.enabled=1'
       loop:
         - docker-ce-stable
         - rpmfusion-free
@@ -112,6 +112,8 @@
         - gnome-shell-extension-caffeine
         - gnome-shell-extension-dash-to-dock
         - gnome-shell-extension-user-theme
+        - libappindicator-gtk3
+        - gnome-shell-extension-appindicator
         - gnome-tweaks
         - gnupg
         - htop
@@ -130,7 +132,7 @@
         - papirus-icon-theme
         - podman
         - polari
-        - protonvpn-stable-release
+        - proton-vpn-gnome-desktop
         - python3
         - python3-pip
         - rubygems
