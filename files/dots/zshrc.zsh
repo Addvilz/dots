@@ -28,7 +28,11 @@ alias mux='tmuxinator'
 
 # Functions
 function rok {
-  ssh -A rok.local -t "tmux new-session -A -s remote"
+  ssh -A rok.lab.lan
+}
+
+function rokx {
+  ssh -A rok.lab.lan -t "tmux new-session -A -s remote"
 }
 
 function cd {
