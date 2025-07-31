@@ -188,7 +188,6 @@
         name:
           - com.bitwarden.desktop
           - com.mattermost.Desktop
-          - com.skype.Client
           - com.slack.Slack
           - com.spotify.Client
           - com.valvesoftware.Steam
