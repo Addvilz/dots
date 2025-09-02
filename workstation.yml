@@ -540,3 +540,78 @@
       command: firewall-cmd --set-default-zone=GoAway
       become: yes
       tags: [ 'firewall' ]
+
+    # USB devices should not wake up my system. That's what the power button is for.
+    - name: Disable USB devices from waking the system (udev rule)
+      become: true
+      copy:
+        dest: /etc/udev/rules.d/99-disable-usb-wakeup.rules
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          ACTION=="add", SUBSYSTEM=="usb", TEST=="power/wakeup", ATTR{power/wakeup}="disabled"
+
+    - name: Reload udev rules
+      become: true
+      command: udevadm control --reload-rules
+      changed_when: false
+
+    - name: Apply udev rule to existing USB devices (disable wakeup now)
+      become: true
+      command: udevadm trigger --subsystem-match=usb
+
+    # s2idle by default
+    - name: Ensure mem_sleep_default=s2idle is set for all kernels (grubby)
+      become: true
+      command: grubby --update-kernel=ALL --args="mem_sleep_default=s2idle"
+      register: grubby_s2idle
+      changed_when: "'--args' in grubby_s2idle.cmd"
+
+    # Get rid of zram when there is enough RAM
+    - name: Gather facts
+      setup:
+        gather_subset:
+          - hardware
+
+    - name: Stop zram swap if active (only if RAM >= 32G)
+      become: true
+      command: swapoff /dev/zram0
+      register: swapoff_zram
+      failed_when: false
+      changed_when: swapoff_zram.rc == 0
+      when: ansible_memtotal_mb >= 32768
+
+    - name: Mask zram swap unit (only if RAM >= 32G)
+      become: true
+      systemd:
+        name: dev-zram0.swap
+        state: stopped
+        enabled: false
+        masked: true
+      when: ansible_memtotal_mb >= 32768
+
+    - name: Disable legacy zram setup service if present (only if RAM >= 32G)
+      become: true
+      systemd:
+        name: systemd-zram-setup@zram0.service
+        state: stopped
+        enabled: false
+        masked: true
+      failed_when: false
+      when: ansible_memtotal_mb >= 32768
+
+    # Avoid swapping if there is SWAP
+    - name: Configure swappiness to 1
+      become: true
+      copy:
+        dest: /etc/sysctl.d/99-swappiness.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          vm.swappiness=1
+
+    - name: Apply sysctl settings
+      become: true
+      command: sysctl --system
