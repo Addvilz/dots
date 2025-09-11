@@ -50,7 +50,7 @@
       loop:
         - 'https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ansible_distribution_major_version}}.noarch.rpm'
         - 'https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ansible_distribution_major_version}}.noarch.rpm'
-        - 'https://repo.protonvpn.com/fedora-{{ansible_distribution_major_version}}-stable/protonvpn-stable-release/protonvpn-stable-release-1.0.2-1.noarch.rpm'
+        - 'https://repo.protonvpn.com/fedora-{{ansible_distribution_major_version}}-stable/protonvpn-stable-release/protonvpn-stable-release-1.0.3-1.noarch.rpm'
       become: yes
       tags: [ 'repositories' ]
 
@@ -589,6 +589,7 @@
         state: stopped
         enabled: false
         masked: true
+      failed_when: false
       when: ansible_memtotal_mb >= 32768
 
     - name: Disable legacy zram setup service if present (only if RAM >= 32G)
