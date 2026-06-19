@@ -1,0 +1,22 @@
+---
+allow_ssh_users: "{{ host_username }} root" # Root ssh sadly required for uConsole
+git_diff_tool: vimdiff
+
+hashicorp_keyring: /etc/apt/keyrings/hashicorp.asc
+uconsole_debian_release: trixie
+wallpaper_path: /usr/share/backgrounds/wallpaper.jpg
+gtk_font_name: IBM Plex Sans 10
+terminal_font_name: JetBrains Mono 11
+
+uconsole_boot_cmdline_paths:
+  - /boot/firmware/cmdline.txt
+  - /boot/cmdline.txt
+
+uconsole_boot_config_paths:
+  - /boot/firmware/config.txt
+  - /boot/config.txt
+
+uconsole_boot_graphic_cmdline_args:
+  - quiet
+  - splash
+  - plymouth.ignore-serial-consoles

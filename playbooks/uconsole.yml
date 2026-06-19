@@ -1,0 +1,598 @@
+---
+# Stop lightdm before applying changes
+- name: Configure uConsole (trixie-based)
+  hosts: uconsole
+  handlers:
+    - name: Restart ssh
+      service:
+        name: ssh
+        state: restarted
+      become: yes
+    - name: Update font cache
+      command: fc-cache -f
+      become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      become: yes
+      tags: [ 'packages' ]
+
+    - name: Install apt repository prerequisites
+      apt:
+        name:
+          - ca-certificates
+          - python3-apt
+        state: present
+      become: yes
+      tags: [ 'packages', 'repositories' ]
+
+    - name: Ensure apt keyring directory exists
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      become: yes
+      tags: [ 'repositories' ]
+
+    - name: Add HashiCorp apt signing key
+      get_url:
+        url: https://apt.releases.hashicorp.com/gpg
+        dest: '{{hashicorp_keyring}}'
+        mode: '0644'
+        owner: root
+        group: root
+      become: yes
+      tags: [ 'repositories' ]
+
+    - name: Add HashiCorp apt repository
+      apt_repository:
+        repo: 'deb [signed-by={{hashicorp_keyring}}] https://apt.releases.hashicorp.com {{uconsole_debian_release}} main'
+        filename: hashicorp
+        state: present
+        update_cache: yes
+      become: yes
+      tags: [ 'repositories' ]
+
+    - name: Install uConsole packages
+      apt:
+        name:
+          - 7zip
+          - ansible
+          - bind9-dnsutils
+          - clang
+          - cloud-utils
+          - cmake
+          - containerd
+          - docker-buildx
+          - docker-compose
+          - docker.io
+          - ffmpeg
+          - fzf
+          - git
+          - git-extras
+          - htop
+          - make
+          - micro
+          - ncdu
+          - nmap
+          - openvpn
+          - podman
+          - python3-pip
+          - terraform
+          - tmux
+          - tmuxinator
+          - traceroute
+          - ufw
+          - unzip
+          - vim
+          - whois
+          - zip
+          - zsh
+        state: latest
+      become: yes
+      tags: [ 'packages' ]
+
+    - name: Enable and start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+      become: yes
+
+    - name: Set default incoming firewall policy
+      community.general.ufw:
+        direction: incoming
+        policy: deny
+      become: yes
+      tags: [ 'firewall' ]
+
+    - name: Set default outgoing firewall policy
+      community.general.ufw:
+        direction: outgoing
+        policy: allow
+      become: yes
+      tags: [ 'firewall' ]
+
+    - name: Allow SSH through firewall
+      community.general.ufw:
+        rule: allow
+        port: '22'
+        proto: tcp
+      become: yes
+      tags: [ 'firewall' ]
+
+    - name: Enable firewall
+      community.general.ufw:
+        state: enabled
+      become: yes
+      tags: [ 'firewall' ]
+
+    - name: Stat Raspberry Pi kernel command line files
+      stat:
+        path: '{{item}}'
+      loop: '{{uconsole_boot_cmdline_paths}}'
+      register: uconsole_boot_cmdline_files
+      tags: [ 'boot' ]
+
+    - name: Read Raspberry Pi kernel command line files
+      slurp:
+        src: '{{item.stat.path}}'
+      loop: '{{uconsole_boot_cmdline_files.results}}'
+      when: item.stat.exists
+      register: uconsole_boot_cmdlines
+      become: yes
+      tags: [ 'boot' ]
+
+    - name: Remove boot graphic kernel arguments
+      copy:
+        dest: '{{item.source}}'
+        content: "{{ ((item.content | b64decode).split() | reject('in', uconsole_boot_graphic_cmdline_args) | join(' ')) ~ '\n' }}"
+        mode: '0644'
+        owner: root
+        group: root
+      loop: '{{uconsole_boot_cmdlines.results | default([])}}'
+      when: item.content is defined
+      become: yes
+      tags: [ 'boot' ]
+
+    - name: Stat Raspberry Pi boot config files
+      stat:
+        path: '{{item}}'
+      loop: '{{uconsole_boot_config_paths}}'
+      register: uconsole_boot_config_files
+      tags: [ 'boot' ]
+
+    - name: Disable Raspberry Pi firmware splash screen
+      lineinfile:
+        path: '{{item.stat.path}}'
+        regexp: '^disable_splash='
+        line: 'disable_splash=1'
+        mode: '0644'
+        owner: root
+        group: root
+      loop: '{{uconsole_boot_config_files.results}}'
+      when: item.stat.exists
+      become: yes
+      tags: [ 'boot' ]
+
+    - name: Ensure font cache tooling is available
+      apt:
+        name: fontconfig
+        state: present
+      become: yes
+      tags: [ 'fonts' ]
+
+    - name: Ensure wallpaper directory exists
+      file:
+        path: '{{wallpaper_path | dirname}}'
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      become: yes
+      tags: [ 'wallpaper' ]
+
+    - name: Copy system wallpaper
+      copy:
+        src: wallpaper.jpg
+        dest: '{{wallpaper_path}}'
+        mode: '0644'
+        owner: root
+        group: root
+      become: yes
+      tags: [ 'wallpaper' ]
+
+    - name: Ensure PCManFM configuration directory exists
+      file:
+        path: '/home/{{host_username}}/.config/pcmanfm/LXDE-pi'
+        state: directory
+        mode: '0700'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+      become: yes
+      tags: [ 'wallpaper' ]
+
+    - name: Find existing PCManFM desktop configuration files
+      find:
+        paths: '/home/{{host_username}}/.config/pcmanfm'
+        patterns: 'desktop-items*.conf'
+        recurse: yes
+        file_type: file
+      register: pcmanfm_desktop_config_files
+      tags: [ 'wallpaper', 'fonts' ]
+
+    - name: Configure PCManFM wallpaper
+      community.general.ini_file:
+        path: '{{item.0}}'
+        section: '*'
+        option: '{{item.1.option}}'
+        value: '{{item.1.value}}'
+        mode: '0600'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+        no_extra_spaces: true
+      loop: "{{ (['/home/' ~ host_username ~ '/.config/pcmanfm/LXDE-pi/desktop-items-0.conf'] + (pcmanfm_desktop_config_files.files | map(attribute='path') | list)) | unique | product(pcmanfm_desktop_config) | list }}"
+      vars:
+        pcmanfm_desktop_config:
+        - { option: wallpaper, value: '{{wallpaper_path}}' }
+        - { option: wallpaper_mode, value: crop }
+        - { option: wallpaper_common, value: '1' }
+        - { option: desktop_font, value: '{{gtk_font_name}}' }
+        - { option: desktop_bg, value: '#d6d6d3d3dede' }
+        - { option: desktop_fg, value: '#e8e8e8e8e8e8' }
+        - { option: desktop_shadow, value: '#d6d6d3d3dede' }
+        - { option: show_documents, value: '0' }
+        - { option: show_trash, value: '0' }
+        - { option: show_mounts, value: '0' }
+      become: yes
+      tags: [ 'wallpaper', 'fonts' ]
+
+    - name: Stat pi-greeter configuration
+      stat:
+        path: /etc/lightdm/pi-greeter.conf
+      register: pi_greeter_config
+      tags: [ 'wallpaper' ]
+
+    - name: Remove invalid top-level pi-greeter wallpaper
+      replace:
+        path: /etc/lightdm/pi-greeter.conf
+        regexp: '\Awallpaper=.*\n?'
+        replace: ''
+      when: pi_greeter_config.stat.exists
+      become: yes
+      tags: [ 'wallpaper' ]
+
+    - name: Configure pi-greeter wallpaper
+      community.general.ini_file:
+        path: /etc/lightdm/pi-greeter.conf
+        section: greeter
+        option: '{{item.option}}'
+        value: '{{item.value}}'
+        no_extra_spaces: true
+        mode: '0644'
+        owner: root
+        group: root
+      loop:
+        - { option: wallpaper, value: '{{wallpaper_path}}' }
+        - { option: wallpaper_mode, value: crop }
+        - { option: gtk-font-name, value: '{{gtk_font_name}}' }
+      when: pi_greeter_config.stat.exists
+      become: yes
+      tags: [ 'wallpaper', 'fonts' ]
+
+    - name: Stat lightdm-gtk-greeter configuration
+      stat:
+        path: /etc/lightdm/lightdm-gtk-greeter.conf
+      register: lightdm_gtk_greeter_config
+      tags: [ 'wallpaper', 'fonts' ]
+
+    - name: Configure lightdm-gtk-greeter appearance
+      community.general.ini_file:
+        path: /etc/lightdm/lightdm-gtk-greeter.conf
+        section: greeter
+        option: '{{item.option}}'
+        value: '{{item.value}}'
+        no_extra_spaces: true
+        mode: '0644'
+        owner: root
+        group: root
+      loop:
+        - { option: background, value: '{{wallpaper_path}}' }
+        - { option: font-name, value: '{{gtk_font_name}}' }
+      when: lightdm_gtk_greeter_config.stat.exists
+      become: yes
+      tags: [ 'wallpaper', 'fonts' ]
+
+    - name: Install fonts
+      copy:
+        src: fonts/
+        dest: /usr/local/share/fonts
+      become: yes
+      notify: [ Update font cache ]
+      tags: [ 'fonts' ]
+
+    - name: Ensure GTK configuration directories exist
+      file:
+        path: '/home/{{host_username}}/.config/{{item}}'
+        state: directory
+        mode: '0700'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+      loop:
+        - gtk-3.0
+        - gtk-4.0
+      become: yes
+      tags: [ 'fonts' ]
+
+    - name: Configure GTK 3 and GTK 4 fonts
+      community.general.ini_file:
+        path: '/home/{{host_username}}/.config/{{item.dir}}/settings.ini'
+        section: Settings
+        option: '{{item.option}}'
+        value: '{{item.value}}'
+        no_extra_spaces: true
+        mode: '0600'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+      loop:
+        - { dir: gtk-3.0, option: gtk-font-name, value: '{{gtk_font_name}}' }
+        - { dir: gtk-3.0, option: gtk-monospace-font-name, value: '{{terminal_font_name}}' }
+        - { dir: gtk-4.0, option: gtk-font-name, value: '{{gtk_font_name}}' }
+        - { dir: gtk-4.0, option: gtk-monospace-font-name, value: '{{terminal_font_name}}' }
+      become: yes
+      tags: [ 'fonts' ]
+
+    - name: Configure GTK 2 fonts
+      lineinfile:
+        path: '/home/{{host_username}}/.gtkrc-2.0'
+        regexp: '^gtk-font-name='
+        line: 'gtk-font-name="{{gtk_font_name}}"'
+        create: yes
+        mode: '0600'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+      become: yes
+      tags: [ 'fonts' ]
+
+    - name: Stat LXTerminal binary
+      stat:
+        path: /usr/bin/lxterminal
+      register: lxterminal_binary
+      tags: [ 'terminal', 'fonts' ]
+
+    - name: Ensure LXTerminal configuration directory exists
+      file:
+        path: '/home/{{host_username}}/.config/lxterminal'
+        state: directory
+        mode: '0700'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+      when: lxterminal_binary.stat.exists
+      become: yes
+      tags: [ 'terminal', 'fonts' ]
+
+    - name: Configure LXTerminal fonts and colors
+      community.general.ini_file:
+        path: '/home/{{host_username}}/.config/lxterminal/lxterminal.conf'
+        section: general
+        option: '{{item.option}}'
+        value: '{{item.value}}'
+        no_extra_spaces: true
+        mode: '0600'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+      loop:
+        - { option: fontname, value: '{{terminal_font_name}}' }
+        - { option: fgcolor, value: '#E5E9F0' }
+        - { option: bgcolor, value: '#2E3440' }
+        - { option: palette_color_0, value: '#3B4252' }
+        - { option: palette_color_1, value: '#BF616A' }
+        - { option: palette_color_2, value: '#A3BE8C' }
+        - { option: palette_color_3, value: '#EBCB8B' }
+        - { option: palette_color_4, value: '#81A1C1' }
+        - { option: palette_color_5, value: '#B48EAD' }
+        - { option: palette_color_6, value: '#88C0D0' }
+        - { option: palette_color_7, value: '#E5E9F0' }
+        - { option: palette_color_8, value: '#4C566A' }
+        - { option: palette_color_9, value: '#BF616A' }
+        - { option: palette_color_10, value: '#A3BE8C' }
+        - { option: palette_color_11, value: '#EBCB8B' }
+        - { option: palette_color_12, value: '#81A1C1' }
+        - { option: palette_color_13, value: '#B48EAD' }
+        - { option: palette_color_14, value: '#8FBCBB' }
+        - { option: palette_color_15, value: '#ECEFF4' }
+      when: lxterminal_binary.stat.exists
+      become: yes
+      tags: [ 'terminal', 'fonts' ]
+
+    - name: Install oh-my-zsh for self
+      script:
+        cmd: 'scripts/oh-my-zsh-setup.sh --unattended --keep-zshrc'
+        chdir: '/home/{{host_username}}'
+        creates: '/home/{{host_username}}/.oh-my-zsh'
+      changed_when: false # ignore
+
+    - name: Install oh-my-zsh for root
+      script:
+        cmd: 'scripts/oh-my-zsh-setup.sh --unattended --keep-zshrc'
+        creates: '/root/.oh-my-zsh'
+      changed_when: false # ignore
+      become: yes
+
+    - name: Ensure group "docker" exists
+      group:
+        name: docker
+        state: present
+      become: yes
+
+    - name: Configure '{{host_username}}' user settings (zsh, docker group)
+      user:
+        name: '{{host_username}}'
+        shell: /bin/zsh
+        groups: docker
+        append: yes
+        create_home: yes
+        password: '*' # Initial password is none, account locked
+        update_password: on_create # Do not reset password from ansible
+      become: yes
+
+    - name: Set root shell to zsh
+      user:
+        name: root
+        shell: /bin/zsh
+      become: yes
+
+    - name: Ensure '/home/{{host_username}}/.ssh/' has correct permissions
+      file:
+        path: '/home/{{host_username}}/.ssh'
+        state: directory
+        mode: '0700'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+      become: yes
+
+    - name: Locate all files in '/home/{{host_username}}/.ssh/'
+      find:
+        paths: '/home/{{host_username}}/.ssh'
+        file_type: file
+        patterns: "*"
+      register: home_dot_ssh_files
+
+    - name: Ensure all files in '/home/{{host_username}}/.ssh/' have correct permissions
+      file:
+        path: '{{ item.path }}'
+        state: file
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+        mode: '0600'
+      loop: '{{ home_dot_ssh_files.files }}'
+      loop_control:
+        label: '{{item.path}}'
+
+    - name: Ensure personal dot files
+      copy:
+        src: '{{item.src}}'
+        dest: '{{item.dest}}'
+        mode: '0600'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+      loop:
+        - { src: dots/zshrc.zsh, dest: '/home/{{host_username}}/.zshrc' }
+        - { src: dots/tmux.conf, dest: '/home/{{host_username}}/.tmux.conf' }
+        - { src: dots/editorconfig, dest: '/home/{{host_username}}/.editorconfig' }
+        - { src: dots/wgetrc, dest: '/home/{{host_username}}/.wgetrc' }
+        - { src: dots/gitignore, dest: '/home/{{host_username}}/.gitignore' }
+        - { src: dots/curlrc, dest: '/home/{{host_username}}/.curlrc' }
+      tags: [ 'dots' ]
+
+    - name: Ensure root dot files
+      copy:
+        src: '{{item.src}}'
+        dest: '{{item.dest}}'
+        mode: '0600'
+        owner: root
+        group: root
+      loop:
+        - { src: dots/zshrc.zsh, dest: '/root/.zshrc' }
+        - { src: dots/editorconfig, dest: '/root/.editorconfig' }
+        - { src: dots/wgetrc, dest: '/root/.wgetrc' }
+        - { src: dots/curlrc, dest: '/root/.curlrc' }
+      become: yes
+      tags: [ 'dots' ]
+
+    - name: Stat personal gitconfig
+      stat:
+        path: '/home/{{host_username}}/.gitconfig'
+      register: home_gitconfig
+
+    - name: Ensure personal gitconfig exists
+      template:
+        src: dots/gitconfig
+        dest: '/home/{{host_username}}/.gitconfig'
+        mode: '0600'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+      when: not home_gitconfig.stat.exists
+
+    - name: Ensure personal authorized keys
+      template:
+        src: dots/authorized_keys
+        dest: '/home/{{host_username}}/.ssh/authorized_keys'
+        mode: '0600'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+
+    - name: Ensure default directories in home
+      file:
+        path: '{{item}}'
+        state: directory
+        mode: '0700'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+      loop:
+        - '/home/{{host_username}}/dots'
+        - '/home/{{host_username}}/Projects'
+        - '/home/{{host_username}}/Projects/Work'
+        - '/home/{{host_username}}/Projects/Work/Archive'
+        - '/home/{{host_username}}/Projects/Work/Scratch'
+        - '/home/{{host_username}}/Projects/Personal'
+        - '/home/{{host_username}}/Projects/Personal/Archive'
+        - '/home/{{host_username}}/Projects/Personal/Scratch'
+        - '/home/{{host_username}}/Documents/Work/Archive'
+        - '/home/{{host_username}}/Documents/Personal/Archive'
+      become: yes
+      tags: [ 'dir-structure' ]
+
+    - name: Ensure local sshd config directory exists
+      file:
+        path: /etc/ssh/sshd_config.d
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      become: yes
+      tags: [ 'sshd' ]
+
+    - name: Ensure local sshd config exists with the right perms
+      file:
+        path: /etc/ssh/sshd_config.d/00-local.conf
+        state: touch
+        mode: '0700'
+        owner: root
+        group: root
+        modification_time: preserve
+        access_time: preserve
+      become: yes
+      tags: [ 'sshd' ]
+
+    - name: Set local sshd config
+      lineinfile:
+        path: /etc/ssh/sshd_config.d/00-local.conf
+        regexp: '^{{item.key}}'
+        line: '{{item.key}} {{item.value}}'
+        state: present
+      become: yes
+      loop:
+        - { key: 'PasswordAuthentication', value: 'no' }
+        - { key: 'PermitEmptyPasswords', value: 'no' }
+        - { key: 'GSSAPIAuthentication', value: 'no' }
+        - { key: 'KbdInteractiveAuthentication', value: 'no' }
+        - { key: 'KerberosAuthentication', value: 'no' }
+        # REQUIRED
+        - { key: 'PermitRootLogin', value: 'yes' }
+        # END REQUIRED
+        - { key: 'X11Forwarding', value: 'no' }
+        - { key: 'AllowTcpForwarding', value: 'yes' }
+        - { key: 'ClientAliveCountMax', value: '3' }
+        - { key: 'ClientAliveInterval', value: '300' }
+        - { key: 'LoginGraceTime', value: '15' }
+        - { key: 'Ciphers', value: 'aes256-gcm@openssh.com,chacha20-poly1305@openssh.com,aes256-ctr,aes128-gcm@openssh.com,aes128-ctr' }
+        - { key: 'MACs', value: 'hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,hmac-sha2-256,hmac-sha2-512' }
+        - { key: 'KexAlgorithms', value: 'curve25519-sha256,curve25519-sha256@libssh.org' }
+        - { key: 'AllowUsers', value: '{{allow_ssh_users}}' }
+      notify: [ Restart ssh ]
+      tags: [ 'sshd' ]

@@ -1,19 +1,6 @@
 ---
 - name: Configure Fedora workstation
   hosts: workstation
-  # Edit as needed if executing remotely
-  remote_user: matiss
-  vars:
-    # Update these variables as needed to match your own settings.
-    host_username: 'matiss'
-    allow_ssh_users: 'matiss'
-    git_email: 'matiss@hub256.com'
-    git_name: 'Matīss Treinis'
-    git_signing_key: '3B44AE79519B1C6552941B109123B913EBF53D43'
-    git_commit_gpgsign: 'true'
-    git_diff_tool: 'meld'
-    git_push_default: 'current'
-    authorized_keys: '{{ lookup("file", "files/id_rsa.pub") }}'
   handlers:
     - name: Update dconf
       shell: dconf update
@@ -32,6 +19,13 @@
         state: reloaded
       become: yes
   tasks:
+    - name: Ensure DNF5 config-manager is available
+      package:
+        name: dnf5-plugins
+        state: present
+      become: yes
+      tags: [ 'repositories' ]
+
     - name: Add RPM keys (.rpm repos)
       rpm_key:
         state: present
@@ -39,7 +33,7 @@
       loop:
         - 'https://rpmfusion.org/keys?action=AttachFile&do=get&target=RPM-GPG-KEY-rpmfusion-free-fedora-2020'
         - 'https://rpmfusion.org/keys?action=AttachFile&do=get&target=RPM-GPG-KEY-rpmfusion-nonfree-fedora-2020'
-        - 'https://repo.protonvpn.com/fedora-{{ansible_distribution_major_version}}-stable/public_key.asc'
+        - "https://repo.protonvpn.com/fedora-{{ ansible_facts['distribution_major_version'] }}-stable/public_key.asc"
       become: yes
       tags: [ 'repositories' ]
 
@@ -48,9 +42,22 @@
         name: '{{ item }}'
         state: present
       loop:
-        - 'https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ansible_distribution_major_version}}.noarch.rpm'
-        - 'https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ansible_distribution_major_version}}.noarch.rpm'
-        - 'https://repo.protonvpn.com/fedora-{{ansible_distribution_major_version}}-stable/protonvpn-stable-release/protonvpn-stable-release-1.0.3-1.noarch.rpm'
+        - "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ ansible_facts['distribution_major_version'] }}.noarch.rpm"
+        - "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ ansible_facts['distribution_major_version'] }}.noarch.rpm"
+      become: yes
+      tags: [ 'repositories' ]
+
+    - name: Add Proton VPN repository
+      yum_repository:
+        name: protonvpn-fedora-stable
+        description: ProtonVPN Fedora Stable repository
+        file: protonvpn-stable
+        baseurl: 'https://repo.protonvpn.com/fedora-$releasever-stable'
+        enabled: yes
+        gpgcheck: yes
+        repo_gpgcheck: no
+        skip_if_unavailable: yes
+        gpgkey: 'https://repo.protonvpn.com/fedora-$releasever-stable/public_key.asc'
       become: yes
       tags: [ 'repositories' ]
 
@@ -65,7 +72,7 @@
       tags: [ 'repositories' ]
 
     - name: Enable repositories
-      shell: 'dnf5 config-manager setopt {{item}}.enabled=1'
+      command: 'dnf5 config-manager setopt {{item}}.enabled=1'
       loop:
         - docker-ce-stable
         - rpmfusion-free
@@ -100,6 +107,7 @@
         - firefox
         - firewall-config
         - firewalld
+        - flatpak
         - fzf
         - gimp
         - git
@@ -127,11 +135,11 @@
         - micro
         - ncdu
         - nmap
+        - openssh-server
         - openvpn
         - p7zip
         - papirus-icon-theme
         - podman
-        - polari
         - proton-vpn-gnome-desktop
         - python3
         - python3-pip
@@ -191,7 +199,6 @@
           - com.slack.Slack
           - com.spotify.Client
           - com.valvesoftware.Steam
-          - org.gnome.World.PikaBackup
           - org.signal.Signal
           - org.standardnotes.standardnotes
           - org.telegram.desktop
@@ -357,16 +364,27 @@
       become: yes
       tags: [ 'dots' ]
 
-    - name: Ensure personal files (from templates)
+    - name: Stat personal gitconfig
+      stat:
+        path: '/home/{{host_username}}/.gitconfig'
+      register: home_gitconfig
+
+    - name: Ensure personal gitconfig exists
       template:
-        src: '{{item.src}}'
-        dest: '{{item.dest}}'
+        src: dots/gitconfig
+        dest: '/home/{{host_username}}/.gitconfig'
         mode: '0600'
         owner: '{{host_username}}'
         group: '{{host_username}}'
-      loop:
-        - { src: dots/gitconfig, dest: '/home/{{host_username}}/.gitconfig' }
-        - { src: dots/authorized_keys, dest: '/home/{{host_username}}/.ssh/authorized_keys' }
+      when: not home_gitconfig.stat.exists
+
+    - name: Ensure personal authorized keys
+      template:
+        src: dots/authorized_keys
+        dest: '/home/{{host_username}}/.ssh/authorized_keys'
+        mode: '0600'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
 
     - name: Ensure default directories in home
       file:
@@ -393,6 +411,7 @@
     - name: Set home folder icons
       shell: 'gio set -t string {{item.dir}} metadata::custom-icon file://{{item.icon}}'
       changed_when: false # Really not that important...
+      failed_when: false
       loop:
         - { dir: '/home/{{host_username}}/dots', icon: '/usr/share/icons/Papirus/64x64/places/folder-orange-sync.svg' }
         - { dir: '/home/{{host_username}}/Projects', icon: '/usr/share/icons/Papirus/64x64/places/folder-magenta-projects.svg' }
@@ -438,6 +457,16 @@
       become: yes
       tags: [ 'dconf' ]
 
+    - name: Ensure dconf GDM configuration defaults exists
+      file:
+        path: /etc/dconf/db/gdm.d
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      become: yes
+      tags: [ 'dconf' ]
+
     - name: Configure dconf global defaults
       copy:
         src: dconf_settings.ini
@@ -466,7 +495,7 @@
       file:
         path: /etc/ssh/sshd_config.d/00-local.conf
         state: touch
-        mode: '0700'
+        mode: '0600'
         owner: root
         group: root
         modification_time: preserve
@@ -580,7 +609,7 @@
       register: swapoff_zram
       failed_when: false
       changed_when: swapoff_zram.rc == 0
-      when: ansible_memtotal_mb >= 32768
+      when: ansible_facts['memtotal_mb'] >= 32768
 
     - name: Mask zram swap unit (only if RAM >= 32G)
       become: true
@@ -590,7 +619,7 @@
         enabled: false
         masked: true
       failed_when: false
-      when: ansible_memtotal_mb >= 32768
+      when: ansible_facts['memtotal_mb'] >= 32768
 
     - name: Disable legacy zram setup service if present (only if RAM >= 32G)
       become: true
@@ -600,7 +629,7 @@
         enabled: false
         masked: true
       failed_when: false
-      when: ansible_memtotal_mb >= 32768
+      when: ansible_facts['memtotal_mb'] >= 32768
 
     # Avoid swapping if there is SWAP
     - name: Configure swappiness to 1

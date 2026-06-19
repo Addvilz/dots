@@ -1,18 +1,6 @@
 ---
 - name: Configure Fedora workstation (headless)
-  hosts: workstation-headless
-  remote_user: matiss
-  vars:
-    # Update these variables as needed to match your own settings.
-    host_username: 'matiss'
-    allow_ssh_users: 'matiss'
-    git_email: 'matiss@hub256.com'
-    git_name: 'Matīss Treinis'
-    git_signing_key: '3B44AE79519B1C6552941B109123B913EBF53D43'
-    git_commit_gpgsign: 'true'
-    git_diff_tool: 'vimdiff'
-    git_push_default: 'current'
-    authorized_keys: '{{ lookup("file", "files/id_rsa.pub") }}'
+  hosts: workstation_headless
   handlers:
     - name: Restart sshd
       service:
@@ -25,6 +13,13 @@
         state: reloaded
       become: yes
   tasks:
+    - name: Ensure DNF5 config-manager is available
+      package:
+        name: dnf5-plugins
+        state: present
+      become: yes
+      tags: [ 'repositories' ]
+
     - name: Add RPM keys (.rpm repos)
       rpm_key:
         state: present
@@ -40,8 +35,8 @@
         name: '{{ item }}'
         state: present
       loop:
-        - 'https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ansible_distribution_major_version}}.noarch.rpm'
-        - 'https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ansible_distribution_major_version}}.noarch.rpm'
+        - "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-{{ ansible_facts['distribution_major_version'] }}.noarch.rpm"
+        - "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-{{ ansible_facts['distribution_major_version'] }}.noarch.rpm"
       become: yes
       tags: [ 'repositories' ]
 
@@ -56,7 +51,7 @@
       tags: [ 'repositories' ]
 
     - name: Enable repositories
-      shell: 'dnf config-manager --set-enabled {{item}}'
+      command: 'dnf5 config-manager setopt {{item}}.enabled=1'
       loop:
         - docker-ce-stable
         - rpmfusion-free
@@ -96,6 +91,7 @@
         - micro
         - ncdu
         - nmap
+        - openssh-server
         - openvpn
         - pinentry-tty
         - python3
@@ -223,16 +219,27 @@
         - { src: dots/curlrc, dest: '/home/{{host_username}}/.curlrc' }
       tags: [ 'dots' ]
 
-    - name: Ensure personal files (from templates)
+    - name: Stat personal gitconfig
+      stat:
+        path: '/home/{{host_username}}/.gitconfig'
+      register: home_gitconfig
+
+    - name: Ensure personal gitconfig exists
       template:
-        src: '{{item.src}}'
-        dest: '{{item.dest}}'
+        src: dots/gitconfig
+        dest: '/home/{{host_username}}/.gitconfig'
         mode: '0600'
         owner: '{{host_username}}'
         group: '{{host_username}}'
-      loop:
-        - { src: dots/gitconfig, dest: '/home/{{host_username}}/.gitconfig' }
-        - { src: dots/authorized_keys, dest: '/home/{{host_username}}/.ssh/authorized_keys' }
+      when: not home_gitconfig.stat.exists
+
+    - name: Ensure personal authorized keys
+      template:
+        src: dots/authorized_keys
+        dest: '/home/{{host_username}}/.ssh/authorized_keys'
+        mode: '0600'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
 
     - name: Ensure default directories in home
       file:
@@ -261,7 +268,7 @@
       file:
         path: /etc/ssh/sshd_config.d/00-local.conf
         state: touch
-        mode: '0700'
+        mode: '0600'
         owner: root
         group: root
         modification_time: preserve

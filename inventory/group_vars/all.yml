@@ -1,0 +1,13 @@
+---
+# Update these variables as needed to match your own settings.
+host_username: matiss
+ansible_user: "{{ host_username }}"
+allow_ssh_users: "{{ host_username }}"
+
+git_email: matiss@hub256.com
+git_name: Matīss Treinis
+git_signing_key: 3B44AE79519B1C6552941B109123B913EBF53D43
+git_commit_gpgsign: "true"
+git_push_default: current
+
+authorized_keys: "{{ lookup('ansible.builtin.file', inventory_dir ~ '/../files/id_ed25519.pub') }}"
