@@ -198,7 +198,7 @@
 
     - name: Copy system wallpaper
       copy:
-        src: wallpaper.jpg
+        src: '{{ dots_files_dir }}/wallpaper.jpg'
         dest: '{{wallpaper_path}}'
         mode: '0644'
         owner: root
@@ -309,7 +309,7 @@
 
     - name: Install fonts
       copy:
-        src: fonts/
+        src: '{{ dots_files_dir }}/fonts/'
         dest: /usr/local/share/fonts
       become: yes
       notify: [ Update font cache ]
@@ -411,14 +411,14 @@
 
     - name: Install oh-my-zsh for self
       script:
-        cmd: 'scripts/oh-my-zsh-setup.sh --unattended --keep-zshrc'
+        cmd: '{{ dots_scripts_dir }}/oh-my-zsh-setup.sh --unattended --keep-zshrc'
         chdir: '/home/{{host_username}}'
         creates: '/home/{{host_username}}/.oh-my-zsh'
       changed_when: false # ignore
 
     - name: Install oh-my-zsh for root
       script:
-        cmd: 'scripts/oh-my-zsh-setup.sh --unattended --keep-zshrc'
+        cmd: '{{ dots_scripts_dir }}/oh-my-zsh-setup.sh --unattended --keep-zshrc'
         creates: '/root/.oh-my-zsh'
       changed_when: false # ignore
       become: yes
@@ -475,7 +475,7 @@
 
     - name: Ensure personal dot files
       copy:
-        src: '{{item.src}}'
+        src: '{{ dots_files_dir }}/{{item.src}}'
         dest: '{{item.dest}}'
         mode: '0600'
         owner: '{{host_username}}'
@@ -491,7 +491,7 @@
 
     - name: Ensure root dot files
       copy:
-        src: '{{item.src}}'
+        src: '{{ dots_files_dir }}/{{item.src}}'
         dest: '{{item.dest}}'
         mode: '0600'
         owner: root
@@ -511,7 +511,7 @@
 
     - name: Ensure personal gitconfig exists
       template:
-        src: dots/gitconfig
+        src: '{{ dots_templates_dir }}/dots/gitconfig'
         dest: '/home/{{host_username}}/.gitconfig'
         mode: '0600'
         owner: '{{host_username}}'
@@ -520,7 +520,7 @@
 
     - name: Ensure personal authorized keys
       template:
-        src: dots/authorized_keys
+        src: '{{ dots_templates_dir }}/dots/authorized_keys'
         dest: '/home/{{host_username}}/.ssh/authorized_keys'
         mode: '0600'
         owner: '{{host_username}}'
