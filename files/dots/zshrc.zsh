@@ -23,6 +23,35 @@ export PATH=${HOME}/.bin:${HOME}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/
 
 source $OH_MY_ZSH_BASE_DIR/oh-my-zsh.sh
 
+# Headless ssh agent support
+if [[ -z ${SSH_AUTH_SOCK:-} || ! -S "$SSH_AUTH_SOCK" ]]; then
+    _user_ssh_agent_sock="${XDG_RUNTIME_DIR:-/run/user/$UID}/user-ssh-agent/agent.sock"
+
+    # Only configure our systemd agent if its socket actually exists.
+    if [[ -S "$_user_ssh_agent_sock" ]]; then
+        export SSH_AUTH_SOCK="$_user_ssh_agent_sock"
+    fi
+
+    unset _user_ssh_agent_sock
+fi
+
+# Automatically specify IdentitiesOnly if key is provided
+ssh() {
+    local arg
+
+    for arg in "$@"; do
+        if [[ "$arg" == "-i" || "$arg" == IdentityFile=* ]]; then
+            command ssh \
+                -o IdentitiesOnly=yes \
+                -o IdentityAgent=none \
+                "$@"
+            return
+        fi
+    done
+
+    command ssh "$@"
+}
+
 alias l='ls -lAFh --color=always --group-directories-first'
 alias mux='tmuxinator'
 

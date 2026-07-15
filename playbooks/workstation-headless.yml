@@ -91,6 +91,7 @@
         - micro
         - ncdu
         - nmap
+        - openssh-clients
         - openssh-server
         - openvpn
         - pinentry-tty
@@ -174,7 +175,65 @@
         create_home: yes
         password: '*' # Initial password is none, account locked
         update_password: on_create # Do not reset password from ansible
+      register: host_user_account
       become: yes
+
+    - name: Enable lingering for '{{host_username}}'
+      command:
+        argv:
+          - loginctl
+          - enable-linger
+          - '{{host_username}}'
+        creates: '/var/lib/systemd/linger/{{host_username}}'
+      become: yes
+
+    - name: Ensure user systemd service directory exists
+      file:
+        path: '/home/{{host_username}}/.config/systemd/user'
+        state: directory
+        mode: '0700'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+      become: yes
+
+    - name: Install user SSH agent service
+      copy:
+        dest: '/home/{{host_username}}/.config/systemd/user/user-ssh-agent.service'
+        content: |
+          [Unit]
+          Description=User-specific OpenSSH authentication agent
+          Documentation=man:ssh-agent(1)
+
+          [Service]
+          Type=simple
+          RuntimeDirectory=user-ssh-agent
+          RuntimeDirectoryMode=0700
+          UMask=0077
+
+          ExecStart=/usr/bin/ssh-agent -D -a %t/user-ssh-agent/agent.sock
+
+          Restart=on-failure
+          RestartSec=2
+
+          [Install]
+          WantedBy=default.target
+        mode: '0644'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+      register: user_ssh_agent_unit
+      become: yes
+
+    - name: Enable and start user SSH agent service
+      systemd_service:
+        name: user-ssh-agent.service
+        scope: user
+        daemon_reload: yes
+        enabled: yes
+        state: "{{ user_ssh_agent_unit.changed | ternary('restarted', 'started') }}"
+      become: yes
+      become_user: '{{host_username}}'
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ host_user_account.uid }}"
 
     - name: Ensure '/home/{{host_username}}/.ssh/' has correct permissions
       file:
