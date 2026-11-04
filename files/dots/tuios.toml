@@ -1,0 +1,35 @@
+[startup]
+tiled = true
+daemon = true
+
+[appearance]
+theme = ""
+border_style = "normal"
+glyphs = "default"
+
+[keybindings]
+preset = "tmux"
+leader_key = "ctrl+w"
+
+[keybindings.prefix_mode]
+new_workspace = ["n", "c"]
+next_workspace = ["N"]
+prefix_last_message = ["alt+n"]
+prefix_split_horizontal = ["v", "\"", "-"]
+prefix_split_vertical = ["h", "%", "|", "\\"]
+toggle_multifocus_all = ["b"]
+reload_config = ["r"]
+prefix_command_palette = [":"]
+prefix_toggle_sidebar = []
+prefix_review = []
+
+[[keybindings.command]]
+key = "prefix+P"
+type = "popup"
+command = 'exec "${SHELL:-/bin/zsh}"'
+description = "Shell popup"
+width = "80%"
+height = "80%"
+
+[spotlight]
+enabled = false

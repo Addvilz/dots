@@ -262,6 +262,26 @@
       loop_control:
         label: '{{item.path}}'
 
+    - name: Ensure TUIOS configuration directory exists
+      file:
+        path: '/home/{{host_username}}/.config/tuios'
+        state: directory
+        mode: '0700'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+      become: yes
+      tags: [ 'dots', 'tuios' ]
+
+    - name: Configure TUIOS
+      copy:
+        src: '{{ dots_files_dir }}/dots/tuios.toml'
+        dest: '/home/{{host_username}}/.config/tuios/config.toml'
+        mode: '0600'
+        owner: '{{host_username}}'
+        group: '{{host_username}}'
+      become: yes
+      tags: [ 'dots', 'tuios' ]
+
     - name: Ensure personal dot files
       copy:
         src: '{{ dots_files_dir }}/{{item.src}}'
