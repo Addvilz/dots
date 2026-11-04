@@ -52,6 +52,22 @@ ssh() {
     command ssh "$@"
 }
 
+kssh() {
+    local arg
+
+    for arg in "$@"; do
+        if [[ "$arg" == "-i" || "$arg" == IdentityFile=* ]]; then
+            command kitten ssh \
+                -o IdentitiesOnly=yes \
+                -o IdentityAgent=none \
+                "$@"
+            return
+        fi
+    done
+
+    command kitten ssh "$@"
+}
+
 alias l='ls -lAFh --color=always --group-directories-first'
 alias mux='tmuxinator'
 

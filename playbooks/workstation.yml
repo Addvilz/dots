@@ -122,6 +122,7 @@
         - gnome-shell-extension-user-theme
         - libappindicator-gtk3
         - gnome-shell-extension-appindicator
+        - gnome-terminal
         - gnome-tweaks
         - gnupg
         - htop
@@ -130,6 +131,7 @@
         - libreoffice-calc
         - libreoffice-impress
         - libreoffice-writer
+        - kitty
         - make
         - meld
         - micro
@@ -332,6 +334,26 @@
       loop: '{{ home_dot_ssh_files.files }}'
       loop_control:
         label: '{{item.path}}'
+
+    - name: Ensure Kitty system configuration directory exists
+      file:
+        path: /etc/xdg/kitty
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      become: yes
+      tags: [ 'dots', 'kitty' ]
+
+    - name: Configure Kitty system defaults
+      copy:
+        src: '{{ dots_files_dir }}/dots/kitty.conf'
+        dest: /etc/xdg/kitty/kitty.conf
+        mode: '0644'
+        owner: root
+        group: root
+      become: yes
+      tags: [ 'dots', 'kitty' ]
 
     - name: Ensure personal dot files
       copy:
