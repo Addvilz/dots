@@ -39,6 +39,10 @@ fi
 ssh() {
     local arg
 
+    if [[ -n ${TUIOS_WINDOW_ID:-${TUIOS_PANE_ID:-}} && ${TERM:-} == xterm-kitty ]]; then
+        local -x TERM=xterm-256color
+    fi
+
     for arg in "$@"; do
         if [[ "$arg" == "-i" || "$arg" == IdentityFile=* ]]; then
             command ssh \
@@ -53,6 +57,11 @@ ssh() {
 }
 
 kssh() {
+    if [[ -n ${TUIOS_WINDOW_ID:-${TUIOS_PANE_ID:-}} ]]; then
+        ssh "$@"
+        return
+    fi
+
     local arg
 
     for arg in "$@"; do
