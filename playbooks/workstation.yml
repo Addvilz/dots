@@ -91,6 +91,7 @@
       loop:
         - NetworkManager-openvpn
         - NetworkManager-openvpn-gnome
+        - adw-gtk3-theme
         - clang
         - cloud-utils
         - cmake
@@ -201,6 +202,7 @@
           - com.slack.Slack
           - com.spotify.Client
           - com.valvesoftware.Steam
+          - org.gtk.Gtk3theme.adw-gtk3-dark
           - org.signal.Signal
           - org.standardnotes.standardnotes
           - org.telegram.desktop
